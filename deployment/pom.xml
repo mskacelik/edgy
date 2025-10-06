@@ -25,9 +25,19 @@
             <artifactId>quarkus-rest-deployment</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-fault-tolerance-deployment</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.acme</groupId>
             <artifactId>edgy</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.smallrye</groupId>
+            <artifactId>smallrye-fault-tolerance-standalone</artifactId>
+            <scope>test</scope>
+            <!-- <version>6.9.3-SNAPSHOT</version> -->
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
