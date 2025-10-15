@@ -4,13 +4,14 @@ import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.PAYLOAD_TOO_LARGE;
+import static org.jboss.resteasy.reactive.RestResponse.StatusCode.REQUEST_TIMEOUT;
+
 import java.util.Objects;
 import org.jboss.logging.Logger;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.httpproxy.Body;
 import io.vertx.httpproxy.ProxyContext;
-import io.vertx.httpproxy.ProxyRequest;
 import io.vertx.httpproxy.ProxyResponse;
 
 public interface ProxyResponseFactory {
@@ -26,6 +27,10 @@ public interface ProxyResponseFactory {
     static Future<ProxyResponse> badRequestInRequestTransformer(ProxyContext context,
             String message) {
         return customResponseInRequestTransformer(context, BAD_REQUEST, message);
+    }
+
+    static Future<ProxyResponse> requestTimeoutInRequestTransformer(ProxyContext context, String message) {
+        return customResponseInRequestTransformer(context, REQUEST_TIMEOUT, message);
     }
 
     static Future<ProxyResponse> payloadTooLargeInRequestTransformer(ProxyContext context,

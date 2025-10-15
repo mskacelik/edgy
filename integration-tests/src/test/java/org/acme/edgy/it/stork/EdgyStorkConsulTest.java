@@ -53,7 +53,7 @@ class EdgyStorkConsulTest {
 
     private String assertTestEndpointAndGetBody() {
         return given()
-                .when().get("/test")
+                .when().get("/stork")
                 .then()
                 .statusCode(OK)
                 .extract().body().asString();

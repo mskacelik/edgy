@@ -8,7 +8,6 @@ import io.vertx.ext.consul.ConsulClientOptions;
 import io.vertx.ext.consul.ServiceOptions;
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.ext.consul.ConsulClient;
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -31,7 +30,7 @@ class StorkResourceApi {
     public String startLoadBalancedServices() {
         vertx.createHttpServer()
             .requestHandler(req -> { 
-                if (!req.path().equals("/test/hello")) {
+                    if (!req.path().equals("/stork/hello")) {
                     req.response().setStatusCode(NOT_FOUND).endAndForget();
                     return;
                 }
@@ -40,7 +39,7 @@ class StorkResourceApi {
 
             vertx.createHttpServer()
             .requestHandler(req -> { 
-                if (!req.path().equals("/test/hello")) {
+                        if (!req.path().equals("/stork/hello")) {
                     req.response().setStatusCode(NOT_FOUND).endAndForget();
                     return;
                 }
