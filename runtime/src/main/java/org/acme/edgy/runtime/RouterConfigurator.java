@@ -5,8 +5,8 @@ import static org.acme.edgy.runtime.api.utils.QueryParamUtils.hasQuery;
 import static org.acme.edgy.runtime.api.utils.SegmentUtils.extractSegmentValues;
 import static org.acme.edgy.runtime.api.utils.SegmentUtils.replaceSegmentsWithRegex;
 
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -95,11 +95,11 @@ public class RouterConfigurator {
             // to include query params from the original API Gateway URI
             propagateQueryParams(proxy);
 
-            // request transformers
-            applyRequestTransformers(route.requestTransformers(), proxy);
-
             // response transformers
             applyResponseTransformers(route.responseTransformers(), proxy);
+
+            // request transformers
+            applyRequestTransformers(route.requestTransformers(), proxy);
 
             registerVertxRoute(router, route, proxy);
         }
@@ -211,7 +211,7 @@ public class RouterConfigurator {
         });
     }
 
-    private void applyRequestTransformers(List<RequestTransformer> requestTransformers, HttpProxy proxy) {
+    private void applyRequestTransformers(Collection<RequestTransformer> requestTransformers, HttpProxy proxy) {
         for (RequestTransformer requestTransformer : requestTransformers) {
             proxy.addInterceptor(new ProxyInterceptor() {
                 @Override
@@ -222,7 +222,7 @@ public class RouterConfigurator {
         }
     }
 
-    private void applyResponseTransformers(List<ResponseTransformer> responseTransformers,
+    private void applyResponseTransformers(Collection<ResponseTransformer> responseTransformers,
             HttpProxy proxy) {
         for (ResponseTransformer responseTransformer : responseTransformers) {
             proxy.addInterceptor(new ProxyInterceptor() {

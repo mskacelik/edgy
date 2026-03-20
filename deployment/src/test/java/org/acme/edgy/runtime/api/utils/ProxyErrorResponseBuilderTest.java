@@ -9,7 +9,6 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.RequestTransformer;
 import org.acme.edgy.runtime.api.ResponseTransformer;
 import org.acme.edgy.runtime.api.Route;
@@ -41,13 +40,6 @@ class ProxyErrorResponseBuilderTest {
                 }
             };
 
-            ResponseTransformer responseAssertFailure = new ResponseTransformer() {
-                @Override
-                public Future<Void> apply(ProxyContext context) {
-                    return Assertions.fail();
-                }
-            };
-
             ResponseTransformer responseTransformerInvokingBadRequest = new ResponseTransformer() {
                 @Override
                 public Future<Void> apply(ProxyContext context) {
@@ -58,9 +50,19 @@ class ProxyErrorResponseBuilderTest {
                 }
             };
 
+            ResponseTransformer responseTransfomerAddsHeader = new ResponseTransformer() {
+                @Override
+                public Future<Void> apply(ProxyContext context) {
+                    // just to check that the response transformer chain is not broken
+                    context.response().putHeader(HEADER, "true");
+                    return context.sendResponse();
+                }
+            };
+
             RequestTransformer requestTransformerInvokingBadRequest = new RequestTransformer() {
                 @Override
                 public Future<ProxyResponse> apply(ProxyContext context) {
+
                     return ProxyErrorResponseBuilder.create(context)
                             .badRequest()
                             .message("Bad Request")
@@ -70,15 +72,15 @@ class ProxyErrorResponseBuilderTest {
 
             return new RoutingConfiguration()
                     .addRoute(new Route("/request-transformer",
-                            Origin.of("origin-1", "origin uri is never called"), PathMode.FIXED)
-                            .addRequestTransformer(requestTransformerInvokingBadRequest)
-                            .addRequestTransformer(requestAssertFailure)
-                            .addResponseTransformer(responseAssertFailure))
+                            Origin.of("origin-1", "origin uri is never called"))
+                            .addRequestTransformer(requestTransformerInvokingBadRequest) // new response
+                            .addRequestTransformer(requestAssertFailure) // never reached
+                            .addResponseTransformer(responseTransfomerAddsHeader)) // is reached
                     .addRoute(new Route("/response-transformer",
-                            Origin.of("origin-2", "http://localhost:8081/test/response-transformer"),
-                            PathMode.FIXED).addResponseTransformer(responseAssertFailure)
-                            .addResponseTransformer(
-                                    responseTransformerInvokingBadRequest));
+                            Origin.of("origin-2", "http://localhost:8081/test/response-transformer"))
+                            .addResponseTransformer(responseTransformerInvokingBadRequest) // new response
+                            .addResponseTransformer(responseTransfomerAddsHeader)); // is reached
+
         }
     }
 
@@ -95,15 +97,18 @@ class ProxyErrorResponseBuilderTest {
     static final QuarkusUnitTest unitTest = new QuarkusUnitTest().setArchiveProducer(
             () -> ShrinkWrap.create(JavaArchive.class).addClasses(RoutingProvider.class));
 
+    private static final String HEADER = "x-added-in-response-transformer";
     @Test
-    void testRequestTransformerFailureBreaksChain() {
+    void testRequestTransformerFailureBreaksChainButDoesNotBreakResponseTransformerChain() {
         RestAssured.given().get("/request-transformer").then().statusCode(BAD_REQUEST).and()
-                .contentType(TEXT_PLAIN).and().body(is("Bad Request"));
+                .contentType(TEXT_PLAIN).and().body(is("Bad Request")).and()
+                .header(HEADER, "true");
     }
 
     @Test
-    void testResponseTransformerFailureBreaksChain() {
+    void testResponseTransformerFailureDoesNotBreakRequestTransformerChain() {
         RestAssured.given().get("/response-transformer").then().statusCode(BAD_REQUEST).and()
-                .contentType(TEXT_PLAIN).and().body(is("Bad Request"));
+                .contentType(TEXT_PLAIN).and().body(is("Bad Request")).and()
+                .header(HEADER, "true");
     }
 }

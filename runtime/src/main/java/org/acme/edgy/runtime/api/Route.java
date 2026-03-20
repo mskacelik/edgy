@@ -1,7 +1,10 @@
 package org.acme.edgy.runtime.api;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.Objects;
 
 public class Route {
 
@@ -10,7 +13,7 @@ public class Route {
     private final PathMode pathMode;
     private RoutingPredicate predicate = rc -> true;
     private final List<RequestTransformer> requestTransformers = new ArrayList<>();
-    private final List<ResponseTransformer> responseTransformers = new ArrayList<>();
+    private final Deque<ResponseTransformer> responseTransformers = new ArrayDeque<>();
 
     public Route(String path, Origin origin, PathMode pathMode) {
         this.path = path;
@@ -48,12 +51,12 @@ public class Route {
         return this;
     }
 
-    public List<ResponseTransformer> responseTransformers() {
+    public Deque<ResponseTransformer> responseTransformers() {
         return responseTransformers;
     }
 
     public Route addResponseTransformer(ResponseTransformer responseTransformer) {
-        responseTransformers.add(responseTransformer);
+        responseTransformers.addFirst(responseTransformer);
         return this;
     }
 }
