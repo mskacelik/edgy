@@ -8,7 +8,7 @@ public class Route {
     private final String path;
     private final Origin origin;
     private final PathMode pathMode;
-    private final List<RoutingPredicate> predicates = new ArrayList<>();
+    private RoutingPredicate predicate = rc -> true;
     private final List<RequestTransformer> requestTransformers = new ArrayList<>();
     private final List<ResponseTransformer> responseTransformers = new ArrayList<>();
 
@@ -30,12 +30,12 @@ public class Route {
         return pathMode;
     }
 
-    public List<RoutingPredicate> predicates() {
-        return predicates;
+    public RoutingPredicate predicate() {
+        return predicate;
     }
 
-    public Route addPredicate(RoutingPredicate predicate) {
-        predicates.add(predicate);
+    public Route setPredicate(RoutingPredicate predicate) {
+        this.predicate = Objects.requireNonNull(predicate);
         return this;
     }
 
