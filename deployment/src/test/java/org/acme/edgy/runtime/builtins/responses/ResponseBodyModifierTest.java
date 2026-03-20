@@ -12,7 +12,6 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.resteasy.reactive.RestResponse;
@@ -38,11 +37,11 @@ class ResponseBodyModifierTest {
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration()
                     .addRoute(new Route("/modify-body",
-                            Origin.of("origin-1", "http://localhost:8081/test/modify-body"), PathMode.FIXED)
+                            Origin.of("origin-1", "http://localhost:8081/test/modify-body"))
                                     .addResponseTransformer(new ResponseBodyModifier(
                                             Body.body(Buffer.buffer(MODIFIED_BODY)))))
                     .addRoute(new Route("/modify-null",
-                            Origin.of("origin-2", "http://localhost:8081/test/modify-null"), PathMode.FIXED)
+                            Origin.of("origin-2", "http://localhost:8081/test/modify-null"))
                                     .addResponseTransformer(new ResponseBodyModifier((Body) null)));
         }
     }

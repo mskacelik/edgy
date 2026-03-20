@@ -15,7 +15,6 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -37,40 +36,38 @@ class ResponseJsonArrayBodyModifierTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration().addRoute(new Route("/remove-element",
-                    Origin.of("origin-1", "http://localhost:8081/test/remove-element"), PathMode.FIXED)
+                    Origin.of("origin-1", "http://localhost:8081/test/remove-element"))
                             .addResponseTransformer(new ResponseJsonArrayBodyModifier(json -> {
                                 json.remove(1); // Remove "Ipsum"
                                 return json;
                             })))
                     .addRoute(new Route("/modify-element",
-                            Origin.of("origin-2", "http://localhost:8081/test/modify-element"), PathMode.FIXED)
+                            Origin.of("origin-2", "http://localhost:8081/test/modify-element"))
                                     .addResponseTransformer(
                                             new ResponseJsonArrayBodyModifier(json -> {
                                                 json.set(0, "Changed");
                                                 return json;
                                             })))
                     .addRoute(new Route("/add-element",
-                            Origin.of("origin-3", "http://localhost:8081/test/add-element"), PathMode.FIXED)
+                            Origin.of("origin-3", "http://localhost:8081/test/add-element"))
                                     .addResponseTransformer(
                                             new ResponseJsonArrayBodyModifier(json -> {
                                                 json.add("NewElement");
                                                 return json;
                                             })))
                     .addRoute(new Route("/set-null-dynamic",
-                            Origin.of("origin-4", "http://localhost:8081/test/set-null-dynamic"),
-                                    PathMode.FIXED).addResponseTransformer(
+                            Origin.of("origin-4", "http://localhost:8081/test/set-null-dynamic")).addResponseTransformer(
                                     new ResponseJsonArrayBodyModifier(json -> null)))
                     .addRoute(new Route("/set-null-static",
-                            Origin.of("origin-5", "http://localhost:8081/test/set-null-static"), PathMode.FIXED)
+                            Origin.of("origin-5", "http://localhost:8081/test/set-null-static"))
                                     .addResponseTransformer(
                                             new ResponseJsonArrayBodyModifier((JsonArray) null)))
                     .addRoute(new Route(
-                            "/replace-full", Origin.of("origin-6", "http://localhost:8081/test/replace-full"),
-                                    PathMode.FIXED).addResponseTransformer(
+                            "/replace-full", Origin.of("origin-6", "http://localhost:8081/test/replace-full")).addResponseTransformer(
                                     new ResponseJsonArrayBodyModifier(new JsonArray().add(1).add(2)
                                             .add(new JsonObject().put("key", "value")))))
                     .addRoute(new Route("/invalid-json",
-                            Origin.of("origin-7", "http://localhost:8081/test/invalid-json"), PathMode.FIXED)
+                            Origin.of("origin-7", "http://localhost:8081/test/invalid-json"))
                                     .addResponseTransformer(
                                             new ResponseJsonArrayBodyModifier(json -> json)));
         }

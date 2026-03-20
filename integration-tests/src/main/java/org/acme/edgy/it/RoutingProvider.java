@@ -9,7 +9,6 @@ import java.util.function.Function;
 import jakarta.enterprise.inject.Produces;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.acme.edgy.runtime.builtins.requests.RequestFaultToleranceApplier;
@@ -33,11 +32,9 @@ class RoutingProvider {
 
     private RoutingConfiguration storkRoutes(RoutingConfiguration routingConfiguration) {
         return routingConfiguration
-                .addRoute(new Route("/test", Origin.of("stork-origin", "stork://my-service/test/hello"),
-                        PathMode.FIXED))
+                .addRoute(new Route("/test", Origin.of("stork-origin", "stork://my-service/test/hello")))
                 .addRoute(new Route("/test-secured",
-                        Origin.of("secured-stork-origin", "storks://my-secured-service/test/hello"),
-                        PathMode.FIXED));
+                        Origin.of("secured-stork-origin", "storks://my-secured-service/test/hello")));
     }
 
     private RoutingConfiguration faultToleranceRoutes(RoutingConfiguration routingConfiguration) {
@@ -59,16 +56,14 @@ class RoutingProvider {
                 // ----------------------------- TIMEOUT ROUTES -----------------------------
                 .addRoute(new Route("/blocking-timeout",
                         Origin.of("blocking-timeout-origin",
-                                "http://localhost:8081/api/fault-tolerance/blocking-timeout"),
-                        PathMode.FIXED)
+                                "http://localhost:8081/api/fault-tolerance/blocking-timeout"))
                         .addRequestTransformer(
                                 new RequestFaultToleranceApplier(
                                         builder -> builder.withTimeout().duration(timeoutLimitMillis, ChronoUnit.MILLIS)
                                                 .done())))
                 .addRoute(new Route("/non-blocking-timeout",
                         Origin.of("non-blocking-timeout-origin",
-                                "http://localhost:8081/api/fault-tolerance/non-blocking-timeout"),
-                        PathMode.FIXED)
+                                "http://localhost:8081/api/fault-tolerance/non-blocking-timeout"))
                         .addRequestTransformer(
                                 new RequestFaultToleranceApplier(
                                         builder -> builder.withTimeout().duration(timeoutLimitMillis, ChronoUnit.MILLIS)
@@ -76,8 +71,7 @@ class RoutingProvider {
                 // ----------------------------- RATE LIMIT ROUTES -----------------------------
                 .addRoute(new Route("/rate-limit",
                         Origin.of("rate-limit-origin",
-                                        "http://localhost:8081/api/fault-tolerance/rate-limit"),
-                        PathMode.FIXED)
+                                        "http://localhost:8081/api/fault-tolerance/rate-limit"))
                         .addRequestTransformer(
                                 new RequestFaultToleranceApplier(
                                         builder -> builder.withRateLimit().limit(rateLimit)
@@ -87,8 +81,7 @@ class RoutingProvider {
                 // ----------------------------- BULKHEAD -----------------------------
                 .addRoute(new Route("/bulkhead",
                         Origin.of("bulkhead-origin",
-                                        "http://localhost:8081/api/fault-tolerance/bulkhead"),
-                        PathMode.FIXED)
+                                        "http://localhost:8081/api/fault-tolerance/bulkhead"))
                         .addRequestTransformer(
                                 new RequestFaultToleranceApplier(
                                         builder -> builder.withBulkhead()
@@ -98,8 +91,7 @@ class RoutingProvider {
                 // ----------------------------- CIRCUIT BREAKER -----------------------------
                 .addRoute(new Route("/circuit-breaker",
                         Origin.of("circuit-breaker-origin",
-                                "http://localhost:8081/api/fault-tolerance/circuit-breaker"),
-                        PathMode.FIXED)
+                                "http://localhost:8081/api/fault-tolerance/circuit-breaker"))
                         .addRequestTransformer(
                                 new RequestFaultToleranceApplier(
                                         builder -> builder.withCircuitBreaker()
@@ -112,8 +104,7 @@ class RoutingProvider {
                 // ---------------- CB + TIMEOUT (skipOn TimeoutException) ---------------------
                 .addRoute(new Route("/circuit-breaker-with-timeout",
                         Origin.of("circuit-breaker-with-timeout-origin",
-                                        "http://localhost:8081/api/fault-tolerance/circuit-breaker-with-timeout"),
-                        PathMode.FIXED)
+                                        "http://localhost:8081/api/fault-tolerance/circuit-breaker-with-timeout"))
                         .addRequestTransformer(
                                 new RequestFaultToleranceApplier(
                                         builder -> builder
@@ -129,8 +120,7 @@ class RoutingProvider {
                 // ----------------------------- FALLBACK -----------------------------
                 .addRoute(new Route("/with-fallback",
                         Origin.of("with-fallback-origin",
-                                "http://localhost:8081/api/non-existing-endpoint"),
-                        PathMode.FIXED)
+                                "http://localhost:8081/api/non-existing-endpoint"))
                         .addRequestTransformer(
                                 new RequestFaultToleranceApplier((proxyContext, builder) -> builder
                                         .withFallback()

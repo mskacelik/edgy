@@ -15,7 +15,6 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -36,7 +35,7 @@ class ResponseJsonObjectToJsonArrayBodyModifierTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration().addRoute(new Route("/object-to-array",
-                    Origin.of("origin-1", "http://localhost:8081/test/object-to-array"), PathMode.FIXED)
+                    Origin.of("origin-1", "http://localhost:8081/test/object-to-array"))
                     .addResponseTransformer(
                             new ResponseJsonObjectToJsonArrayBodyModifier(json -> {
                                 JsonArray jsonArray = new JsonArray();
@@ -46,8 +45,7 @@ class ResponseJsonObjectToJsonArrayBodyModifierTest {
                                 return jsonArray;
                             })))
                     .addRoute(new Route("/object-to-brand-new-array",
-                            Origin.of("origin-2", "http://localhost:8081/test/object-to-brand-new-array"),
-                            PathMode.FIXED).addResponseTransformer(
+                            Origin.of("origin-2", "http://localhost:8081/test/object-to-brand-new-array")).addResponseTransformer(
                                     new ResponseJsonObjectToJsonArrayBodyModifier(json -> {
                                         JsonArray jsonArray = new JsonArray();
                                         jsonArray.add("value1");
@@ -55,12 +53,12 @@ class ResponseJsonObjectToJsonArrayBodyModifierTest {
                                         return jsonArray;
                                     })))
                     .addRoute(new Route("/object-to-empty",
-                            Origin.of("origin-3", "http://localhost:8081/test/object-to-empty"), PathMode.FIXED)
+                            Origin.of("origin-3", "http://localhost:8081/test/object-to-empty"))
                             .addResponseTransformer(
                                     new ResponseJsonObjectToJsonArrayBodyModifier(
                                             json -> null)))
                     .addRoute(new Route("/invalid-json",
-                            Origin.of("origin-4", "http://localhost:8081/test/invalid-json"), PathMode.FIXED)
+                            Origin.of("origin-4", "http://localhost:8081/test/invalid-json"))
                             .addResponseTransformer(
                                     new ResponseJsonObjectToJsonArrayBodyModifier(json -> {
                                         // Just transform to array for invalid JSON test

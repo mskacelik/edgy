@@ -15,7 +15,6 @@ import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -47,8 +46,7 @@ class EdgyHttpsTlsReloadTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration().addRoute(new Route("/secure",
-                    Origin.of("origin-1", ORIGIN_URI),
-                    PathMode.FIXED));
+                    Origin.of("origin-1", ORIGIN_URI)));
         }
     }
 

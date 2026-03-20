@@ -1,4 +1,4 @@
-package org.acme.edgy.test;
+package org.acme.edgy.test.regex;
 
 import static org.acme.edgy.runtime.api.PathMode.REGEXP;
 import static org.hamcrest.Matchers.is;
@@ -21,22 +21,23 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
 
-
-class EdgyRegexpPathTest {
+class EdgyRegExpTest {
 
     @ApplicationScoped
     static class RoutingProvider {
         @Produces
-        RoutingConfiguration basicRouting() {
+        RoutingConfiguration routing() {
             return new RoutingConfiguration()
-                            .addRoute(new Route("/[a-c]+/.*", Origin.of("origin-1", "http://localhost:8081/test"),
-                                            REGEXP))
+                    .addRoute(new Route("/[a-c]+/.*", Origin.of("origin-1", "http://localhost:8081/test"),
+                            REGEXP))
                     .addRoute(new Route("/user/[0-9]+/profile",
-                                            Origin.of("origin-2", "http://localhost:8081/test"), REGEXP))
+                            Origin.of("origin-2", "http://localhost:8081/test"), REGEXP))
                     .addRoute(new Route("/api/v[0-9]+/resource/[a-zA-Z0-9_-]+",
-                                            Origin.of("origin-3", "http://localhost:8081/test"), REGEXP))
+                            Origin.of("origin-3", "http://localhost:8081/test"), REGEXP))
                     .addRoute(new Route("/complex/([a-z]+)-(\\d{2,4})/item/(foo|bar)",
-                                            Origin.of("origin-4", "http://localhost:8081/test"), REGEXP));
+                            Origin.of("origin-4", "http://localhost:8081/test"), REGEXP))
+                    .addRoute(new Route("/multi/.*/end",
+                            Origin.of("origin-5", "http://localhost:8081/test"), REGEXP));
         }
     }
 
@@ -80,5 +81,17 @@ class EdgyRegexpPathTest {
         RestAssured.given().get("/complex/ABC-2022/item/foo").then().statusCode(NOT_FOUND);
         RestAssured.given().get("/complex/abc-1/item/foo").then().statusCode(NOT_FOUND);
         RestAssured.given().get("/complex/abc-2022/item/baz").then().statusCode(NOT_FOUND);
+    }
+
+    @Test
+    void test_wildcardSpansMultipleSegments() {
+        RestAssured.given().get("/multi/b/b/b/b/d/d/end").then().statusCode(OK).body(is("Hello!"));
+        RestAssured.given().get("/multi/anything/end").then().statusCode(OK).body(is("Hello!"));
+    }
+
+    @Test
+    void test_wildcardSpansMultipleSegments_noMatch() {
+        RestAssured.given().get("/multi/b/b/b/b/d/d").then().statusCode(NOT_FOUND);
+        RestAssured.given().get("/multi/b/b/b/b/d/d/other").then().statusCode(NOT_FOUND);
     }
 }

@@ -15,7 +15,6 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -38,45 +37,39 @@ class ResponseJsonObjectBodyModifierTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration().addRoute(new Route("/remove-field",
-                            Origin.of("origin-1", "http://localhost:8081/test/remove-field"), PathMode.FIXED)
+                            Origin.of("origin-1", "http://localhost:8081/test/remove-field"))
                             .addResponseTransformer(new ResponseJsonObjectBodyModifier(json -> {
                                 json.remove("2");
                                 return json;
                             })))
                     .addRoute(new Route("/modify-field",
-                                            Origin.of("origin-2", "http://localhost:8081/test/modify-field"),
-                                            PathMode.FIXED)
+                                            Origin.of("origin-2", "http://localhost:8081/test/modify-field"))
                                     .addResponseTransformer(
                                             new ResponseJsonObjectBodyModifier(json -> {
                                                 json.put("1", "Changed");
                                                 return json;
                                             })))
                     .addRoute(new Route("/add-field",
-                                            Origin.of("origin-3", "http://localhost:8081/test/add-field"),
-                                            PathMode.FIXED)
+                                            Origin.of("origin-3", "http://localhost:8081/test/add-field"))
                                     .addResponseTransformer(
                                             new ResponseJsonObjectBodyModifier(json -> {
                                                 json.put("4", "NewVal");
                                                 return json;
                                             })))
                     .addRoute(new Route("/set-null-dynamic",
-                                            Origin.of("origin-4", "http://localhost:8081/test/set-null-dynamic"),
-                                            PathMode.FIXED).addResponseTransformer(
+                                            Origin.of("origin-4", "http://localhost:8081/test/set-null-dynamic")).addResponseTransformer(
                                     new ResponseJsonObjectBodyModifier(json -> null)))
                     .addRoute(new Route("/set-null-static",
-                                            Origin.of("origin-5", "http://localhost:8081/test/set-null-static"),
-                                            PathMode.FIXED)
+                                            Origin.of("origin-5", "http://localhost:8081/test/set-null-static"))
                                     .addResponseTransformer(
                                             new ResponseJsonObjectBodyModifier((JsonObject) null)))
                     .addRoute(new Route("/replace-full",
-                                            Origin.of("origin-6", "http://localhost:8081/test/replace-full"),
-                                            PathMode.FIXED)
+                                            Origin.of("origin-6", "http://localhost:8081/test/replace-full"))
                                     .addResponseTransformer(new ResponseJsonObjectBodyModifier(
                                             new JsonObject().put("replaced", "yes").put("arr",
                                                     new JsonArray().add(1).add(2)))))
                     .addRoute(new Route("/invalid-json",
-                                            Origin.of("origin-7", "http://localhost:8081/test/invalid-json"),
-                                            PathMode.FIXED)
+                                            Origin.of("origin-7", "http://localhost:8081/test/invalid-json"))
                                     .addResponseTransformer(
                                             new ResponseJsonObjectBodyModifier(json -> json)));
         }

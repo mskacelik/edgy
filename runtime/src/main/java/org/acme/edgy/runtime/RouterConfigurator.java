@@ -2,8 +2,7 @@ package org.acme.edgy.runtime;
 
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.appendUriQueries;
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.hasQuery;
-import static org.acme.edgy.runtime.api.utils.SegmentUtils.extractSegmentValues;
-import static org.acme.edgy.runtime.api.utils.SegmentUtils.replaceSegmentsWithRegex;
+import static org.acme.edgy.runtime.api.utils.QueryParamUtils.urlEncode;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -14,12 +13,11 @@ import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.RequestTransformer;
 import org.acme.edgy.runtime.api.ResponseTransformer;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
-import org.acme.edgy.runtime.api.RoutingPredicate;
+import org.acme.edgy.runtime.api.utils.SegmentUtils;
 import org.acme.edgy.runtime.config.EdgyConfig;
 import org.acme.edgy.runtime.config.EdgyOriginConfig;
 import org.jboss.logging.Logger;
@@ -48,10 +46,7 @@ public class RouterConfigurator {
 
     private static final Logger logger = Logger.getLogger(RouterConfigurator.class);
 
-    private static final String REQUEST_URI = "__REQUEST_URI__";
-    private static final String REQUEST_URI_AFTER_PREFIX = "__REQUEST_URI_AFTER_PREFIX__";
-    private static final String REGEXP_ZERO_OR_MORE = "*";
-    private static final String CURLY_BRACE = "{";
+    private static final String REQUEST_URI = SegmentUtils.REQUEST_URI;
 
     @Inject
     Vertx vertx;
@@ -123,8 +118,6 @@ public class RouterConfigurator {
         String identifier = origin.identifier();
         EdgyOriginConfig originConfig = edgyConfig.origins().get(identifier);
         if (originConfig == null) {
-            // there is not origin-specific configuration in the properties => no need to
-            // configure anything
             return;
         }
         configureTlsOptionsForOrigin(origin, originConfig, httpClient);
@@ -178,35 +171,30 @@ public class RouterConfigurator {
         });
     }
 
-    private boolean pathNeedsUriTemplateResolving(String path) {
-        return path.contains(CURLY_BRACE);
-    }
-
     private void rerouteProxyRequestAndResolveUriTemplate(HttpProxy proxy, Route route) {
+        String originPath = route.resolvedOriginPath();
+        boolean hasUriTemplateVariables = originPath.indexOf(SegmentUtils.OPEN_BRACE) >= 0;
+        UriTemplate uriTemplate = hasUriTemplateVariables ? UriTemplate.of(originPath) : null;
         proxy.addInterceptor(new ProxyInterceptor() {
             @Override
             public Future<ProxyResponse> handleProxyRequest(ProxyContext context) {
                 ProxyRequest proxyRequest = context.request();
-                String originPath = route.origin().path();
-                if (!pathNeedsUriTemplateResolving(originPath)) {
+
+                if (!hasUriTemplateVariables) {
                     proxyRequest.setURI(originPath);
                     return context.sendRequest();
                 }
-                UriTemplate uriTemplate = UriTemplate.of(originPath);
+
                 Variables variables = Variables.variables()
                         .set(REQUEST_URI, proxyRequest.getURI());
-                if (route.pathMode() == PathMode.PARAMS) {
-                    extractSegmentValues(route.path(), proxyRequest.getURI())
-                            .forEach(variables::set);
-                } else if (route.pathMode() == PathMode.PREFIX) {
-                    int starPos = route.path().indexOf(REGEXP_ZERO_OR_MORE);
-                    variables.set(REQUEST_URI_AFTER_PREFIX,
-                            proxyRequest.getURI().substring(starPos));
-                }
-                proxyRequest.proxiedRequest().params().forEach(variables::set);
+
+                route.extractPathVariables(proxyRequest.getURI())
+                        .forEach(variables::set);
+
+                proxyRequest.proxiedRequest().params()
+                        .forEach((name, value) -> variables.set(name, urlEncode(value)));
                 proxyRequest.setURI(uriTemplate.expandToString(variables));
                 return context.sendRequest();
-
             }
         });
     }
@@ -235,26 +223,17 @@ public class RouterConfigurator {
     }
 
     private void registerVertxRoute(Router router, Route edgyRoute, HttpProxy proxy) {
-        var vertxRoute = switch (edgyRoute.pathMode()) {
-            case FIXED, PREFIX -> router.route(edgyRoute.path());
-            case PARAMS -> router.routeWithRegex(replaceSegmentsWithRegex(edgyRoute.path()));
-            case REGEXP -> router.routeWithRegex(edgyRoute.path());
-        };
-
+        var vertxRoute = edgyRoute.needsRegexRouting()
+                ? router.routeWithRegex(edgyRoute.resolvedPath())
+                : router.route(edgyRoute.resolvedPath());
         ProxyHandler proxyHandler = ProxyHandler.create(proxy);
-        List<RoutingPredicate> predicates = edgyRoute.predicates();
-        if (predicates.isEmpty()) {
-            vertxRoute.handler(proxyHandler);
-            return;
-        }
-
         vertxRoute.handler(rc -> {
-            if (predicates.stream().allMatch(predicate -> predicate.test(rc))) {
+            if (edgyRoute.predicate().test(rc)) {
                 proxyHandler.handle(rc);
                 return;
             }
-            // if the predicates do not match, it will sequentially try the next route (with
-            // the same Path), if it exists
+            // if the predicate does not match, it will sequentially try the next route
+            // (with the same Path), if it exists
             rc.next();
         });
     }
