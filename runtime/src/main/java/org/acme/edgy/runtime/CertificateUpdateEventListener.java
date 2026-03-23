@@ -14,10 +14,10 @@ public class CertificateUpdateEventListener {
 
     private static final Logger logger = Logger.getLogger(CertificateUpdateEventListener.class);
 
-    void onCertificateUpdate(@Observes CertificateUpdatedEvent event) {
+    void onCertificateUpdate(@Observes CertificateUpdatedEvent event, OriginHttpClientManager originHttpClientManager) {
         String updatedTlsConfigurationName = event.name();
         TlsConfiguration updatedTlsConfiguration = event.tlsConfiguration();
-        for (HttpClient httpClientToBeChanged : EdgyRecorder
+        for (HttpClient httpClientToBeChanged : originHttpClientManager
                 .clientsUsingTlsConfig(updatedTlsConfigurationName)) {
             httpClientToBeChanged.updateSSLOptions(updatedTlsConfiguration.getSSLOptions())
                     .andThen(new Handler<AsyncResult<Boolean>>() {

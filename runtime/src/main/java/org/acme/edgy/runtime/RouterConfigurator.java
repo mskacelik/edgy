@@ -5,31 +5,20 @@ import static org.acme.edgy.runtime.api.utils.QueryParamUtils.hasQuery;
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.urlEncode;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
-import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.RequestTransformer;
 import org.acme.edgy.runtime.api.ResponseTransformer;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.acme.edgy.runtime.api.utils.SegmentUtils;
-import org.acme.edgy.runtime.config.EdgyConfig;
-import org.acme.edgy.runtime.config.EdgyOriginConfig;
-import org.jboss.logging.Logger;
 
 import io.quarkus.arc.DefaultBean;
-import io.quarkus.runtime.configuration.ConfigurationException;
-import io.quarkus.tls.TlsConfigurationRegistry;
-import io.quarkus.tls.runtime.config.TlsConfig;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.proxy.handler.ProxyHandler;
 import io.vertx.httpproxy.HttpProxy;
@@ -44,46 +33,20 @@ import io.vertx.uritemplate.Variables;
 @DefaultBean
 public class RouterConfigurator {
 
-    private static final Logger logger = Logger.getLogger(RouterConfigurator.class);
-
     private static final String REQUEST_URI = SegmentUtils.REQUEST_URI;
-
-    @Inject
-    Vertx vertx;
 
     @Inject
     RoutingConfiguration routingConfiguration;
 
     @Inject
-    TlsConfigurationRegistry tlsConfigurationRegistry;
-
-    @Inject
-    EdgyConfig edgyConfig;
+    OriginHttpClientManager originHttpClientManager;
 
     void configure(@Observes Router router) {
-        // TODO this is a very early hacky start
-
-        final Map<String, Origin> origins = new HashMap<>();
-
         for (Route route : routingConfiguration.routes()) {
-            Origin origin = route.origin();
-
-            // Track origin and check for conflicts
-            Origin existingOrigin = origins.get(origin.identifier());
-            boolean originAlreadyExists = existingOrigin != null;
-            if (originAlreadyExists && !existingOrigin.uri().equals(origin.uri())) {
-                throw new IllegalStateException(
-                        "Origin identifier '" + origin.identifier() + "' is already associated with a different URI: "
-                                + existingOrigin.uri() + " vs " + origin.uri());
-            }
-            if (!originAlreadyExists) {
-                origins.put(origin.identifier(), origin);
-            }
-
-            HttpClient httpClient = httpClientForOrigin(origin);
+            HttpClient httpClient = originHttpClientManager.getOrCreateHttpClient(route.origin());
 
             HttpProxy proxy = HttpProxy.reverseProxy(httpClient)
-                    .origin(origin.originRequestProvider()); // dynamically receive the origin
+                    .origin(route.origin().originRequestProvider());
 
             rerouteProxyRequestAndResolveUriTemplate(proxy, route);
 
@@ -98,56 +61,6 @@ public class RouterConfigurator {
 
             registerVertxRoute(router, route, proxy);
         }
-
-    }
-
-    private HttpClient httpClientForOrigin(Origin origin) {
-        HttpClient existing = origin.httpClient();
-        if (existing != null) {
-            return existing;
-        }
-
-        HttpClientOptions options = new HttpClientOptions();
-        HttpClient httpClient = vertx.createHttpClient(options);
-        configureOrigin(origin, httpClient);
-        origin.setHttpClient(httpClient);
-        return httpClient;
-    }
-
-    private void configureOrigin(Origin origin, HttpClient httpClient) {
-        String identifier = origin.identifier();
-        EdgyOriginConfig originConfig = edgyConfig.origins().get(identifier);
-        if (originConfig == null) {
-            return;
-        }
-        configureTlsOptionsForOrigin(origin, originConfig, httpClient);
-    }
-
-    private void configureTlsOptionsForOrigin(Origin origin, EdgyOriginConfig originConfig, HttpClient httpClient) {
-        originConfig.tlsConfigurationName()
-                .ifPresentOrElse(bucketName -> tlsConfigurationRegistry.get(bucketName).ifPresentOrElse(
-                        tlsConfig -> {
-                            if (!origin.supportsTls()) {
-                                logger.warnf(
-                                        "Origin '%s' does not support TLS, but a TLS configuration ('%s') was specified for it."
-                                                + " Make sure to use the proper protocol for the origin.",
-                                        origin.identifier(), bucketName);
-                            }
-                            EdgyRecorder.registerHttpClient(bucketName, httpClient);
-                            httpClient.updateSSLOptions(tlsConfig.getSSLOptions());
-                        },
-                        () -> {
-                            throw new ConfigurationException("TLS configuration '" + bucketName
-                                    + "' was specified for origin '" + origin.identifier()
-                                    + "', but it does not exist.");
-                        }),
-                        () ->
-                        // No origin-specific TLS config, check for default
-                        tlsConfigurationRegistry.getDefault().ifPresent(
-                                tlsConfig -> {
-                                    EdgyRecorder.registerHttpClient(TlsConfig.DEFAULT_NAME, httpClient);
-                                    httpClient.updateSSLOptions(tlsConfig.getSSLOptions());
-                                }));
     }
 
     private void propagateQueryParams(HttpProxy proxy) {
