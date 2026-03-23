@@ -56,8 +56,14 @@ public class OriginHttpClientManager {
         }
 
         HttpClientOptions options = new HttpClientOptions();
+        EdgyOriginConfig originConfig = edgyConfig.origins().get(origin.identifier());
+        if (originConfig != null) {
+            configureHttpClientOptions(options, originConfig);
+        }
         HttpClient httpClient = vertx.createHttpClient(options);
-        configureOrigin(origin, httpClient);
+        if (originConfig != null) {
+            configureTlsOptions(origin, originConfig, httpClient);
+        }
         origin.setHttpClient(httpClient);
         return httpClient;
     }
@@ -71,12 +77,9 @@ public class OriginHttpClientManager {
                 .add(httpClient);
     }
 
-    private void configureOrigin(Origin origin, HttpClient httpClient) {
-        EdgyOriginConfig originConfig = edgyConfig.origins().get(origin.identifier());
-        if (originConfig == null) {
-            return;
-        }
-        configureTlsOptions(origin, originConfig, httpClient);
+    private void configureHttpClientOptions(HttpClientOptions options, EdgyOriginConfig originConfig) {
+        originConfig.idleTimeout().ifPresent(options::setIdleTimeout);
+        originConfig.maxPoolSize().ifPresent(options::setMaxPoolSize);
     }
 
     private void configureTlsOptions(Origin origin, EdgyOriginConfig originConfig, HttpClient httpClient) {
