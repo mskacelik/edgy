@@ -14,7 +14,6 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.resteasy.reactive.RestResponse;
@@ -39,35 +38,34 @@ class RequestJsonObjectBodyModifierTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration().addRoute(new Route("/remove-field",
-                    Origin.of("origin-1", "http://localhost:8081/test/remove-field"), PathMode.FIXED)
+                    Origin.of("origin-1", "http://localhost:8081/test/remove-field"))
                             .addRequestTransformer(new RequestJsonObjectBodyModifier(json -> {
                                 json.remove("2");
                                 return json;
                             })))
                     .addRoute(new Route("/modify-field",
-                            Origin.of("origin-2", "http://localhost:8081/test/modify-field"), PathMode.FIXED)
+                            Origin.of("origin-2", "http://localhost:8081/test/modify-field"))
                                     .addRequestTransformer(
                                             new RequestJsonObjectBodyModifier(json -> {
                                                 json.put("1", "Changed");
                                                 return json;
                                             })))
                     .addRoute(new Route("/add-field",
-                            Origin.of("origin-3", "http://localhost:8081/test/add-field"), PathMode.FIXED)
+                            Origin.of("origin-3", "http://localhost:8081/test/add-field"))
                                     .addRequestTransformer(
                                             new RequestJsonObjectBodyModifier(json -> {
                                                 json.put("4", "NewVal");
                                                 return json;
                                             })))
                     .addRoute(new Route("/set-null-dynamic",
-                            Origin.of("origin-4", "http://localhost:8081/test/set-null-dynamic"),
-                                    PathMode.FIXED).addRequestTransformer(
+                            Origin.of("origin-4", "http://localhost:8081/test/set-null-dynamic")).addRequestTransformer(
                                     new RequestJsonObjectBodyModifier(json -> null)))
                     .addRoute(new Route("/set-null-static",
-                            Origin.of("origin-5", "http://localhost:8081/test/set-null-static"), PathMode.FIXED)
+                            Origin.of("origin-5", "http://localhost:8081/test/set-null-static"))
                                     .addRequestTransformer(
                                             new RequestJsonObjectBodyModifier((JsonObject) null)))
                     .addRoute(new Route("/replace-full",
-                            Origin.of("origin-6", "http://localhost:8081/test/replace-full"), PathMode.FIXED)
+                            Origin.of("origin-6", "http://localhost:8081/test/replace-full"))
                                     .addRequestTransformer(new RequestJsonObjectBodyModifier(
                                             new JsonObject().put("replaced", "yes").put("arr",
                                                     new JsonArray().add(1).add(2)))));

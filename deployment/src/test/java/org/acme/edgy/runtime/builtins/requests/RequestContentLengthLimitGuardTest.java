@@ -10,7 +10,6 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.resteasy.reactive.RestResponse;
@@ -31,7 +30,7 @@ class RequestContentLengthLimitGuardTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration().addRoute(new Route("/content-length-limit",
-                    Origin.of("origin-1", "http://localhost:8081/test/content-length-limit"), PathMode.FIXED)
+                    Origin.of("origin-1", "http://localhost:8081/test/content-length-limit"))
                     .addRequestTransformer(
                             new RequestContentLengthLimitGuard(CONTENT_LENGTH_LIMIT)));
         }

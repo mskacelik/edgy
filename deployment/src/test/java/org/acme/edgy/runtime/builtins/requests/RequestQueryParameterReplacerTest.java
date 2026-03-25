@@ -19,7 +19,6 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.UriInfo;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.acme.edgy.runtime.builtins.assertions.QueryParamAssertions;
@@ -47,48 +46,40 @@ class RequestQueryParameterReplacerTest {
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration()
                     .addRoute(new Route("/replace-with-value",
-                                            Origin.of("origin-1", "http://localhost:8081/test/replace-with-value"),
-                                            PathMode.FIXED).addRequestTransformer(
+                                            Origin.of("origin-1", "http://localhost:8081/test/replace-with-value")).addRequestTransformer(
                                     new RequestQueryParameterReplacer(QUERY_PARAM_KEY_1,
                                             QUERY_PARAM_VALUE_2)))
                     .addRoute(new Route("/replace-non-existing",
-                                            Origin.of("origin-2", "http://localhost:8081/test/replace-non-existing"),
-                                            PathMode.FIXED).addRequestTransformer(
+                                            Origin.of("origin-2", "http://localhost:8081/test/replace-non-existing")).addRequestTransformer(
                                     new RequestQueryParameterReplacer(QUERY_PARAM_KEY_2,
                                             QUERY_PARAM_VALUE_2)))
                     .addRoute(new Route("/no-query",
-                                            Origin.of("origin-3", "http://localhost:8081/test/no-query"),
-                                            PathMode.FIXED)
+                                            Origin.of("origin-3", "http://localhost:8081/test/no-query"))
                                     .addRequestTransformer(new RequestQueryParameterReplacer(
                                             QUERY_PARAM_KEY_2, QUERY_PARAM_VALUE_2)))
                     .addRoute(new Route("/replace-empty",
-                                            Origin.of("origin-4", "http://localhost:8081/test/replace-with-value"),
-                                            PathMode.FIXED).addRequestTransformer(
+                                            Origin.of("origin-4", "http://localhost:8081/test/replace-with-value")).addRequestTransformer(
                                     new RequestQueryParameterReplacer(QUERY_PARAM_KEY_1)))
                     .addRoute(new Route("/replace-multiple-values",
-                                            Origin.of("origin-5", "http://localhost:8081/test/replace-multiple-values"),
-                                            PathMode.FIXED).addRequestTransformer(
+                                            Origin.of("origin-5", "http://localhost:8081/test/replace-multiple-values")).addRequestTransformer(
                                     new RequestQueryParameterReplacer(QUERY_PARAM_KEY_1,
                                             QUERY_PARAM_VALUE_2, QUERY_PARAM_VALUE_1)))
                     .addRoute(new Route("/replace-origin-uri-query-params",
                                             Origin.of("origin-6",
                                                             "http://localhost:8081/test/replace-origin-uri-query-params?"
                                     + encodeQueryParamSinglePair(QUERY_PARAM_KEY_1,
-                                                    EMPTY_QUERY_VALUE)),
-                            PathMode.FIXED).addRequestTransformer(
+                                                    EMPTY_QUERY_VALUE))).addRequestTransformer(
                                     new RequestQueryParameterReplacer(QUERY_PARAM_KEY_1,
                                             QUERY_PARAM_VALUE_2)))
                     .addRoute(new Route("/replace-propagated-and-origin-uri-query-params", Origin
                                             .of("origin-7", "http://localhost:8081/test/replace-propagated-and-origin-uri-query-params?"
                                     + encodeQueryParamSinglePair(QUERY_PARAM_KEY_1,
-                                                    QUERY_PARAM_VALUE_1)),
-                            PathMode.FIXED).addRequestTransformer(
+                                                    QUERY_PARAM_VALUE_1))).addRequestTransformer(
                                     new RequestQueryParameterReplacer(QUERY_PARAM_KEY_1,
                                             QUERY_PARAM_VALUE_2, QUERY_PARAM_VALUE_1)))
                     .addRoute(new Route("/add-query-param-transformer",
                                             Origin.of("origin-8",
-                                                            "http://localhost:8081/test/add-query-param-transformer"),
-                                            PathMode.FIXED)
+                                                            "http://localhost:8081/test/add-query-param-transformer"))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_1, QUERY_PARAM_VALUE_1))
                                     .addRequestTransformer(new RequestQueryParameterReplacer(

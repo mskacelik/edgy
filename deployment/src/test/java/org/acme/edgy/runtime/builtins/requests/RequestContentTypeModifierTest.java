@@ -16,7 +16,6 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.resteasy.reactive.RestResponse;
@@ -42,15 +41,15 @@ class RequestContentTypeModifierTest {
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration()
                     .addRoute(new Route("/json-to-plain",
-                            Origin.of("origin-1", "http://localhost:8081/test/json-to-plain"), PathMode.FIXED)
+                            Origin.of("origin-1", "http://localhost:8081/test/json-to-plain"))
                                     .addRequestTransformer(
                                             new RequestContentTypeModifier(TEXT_PLAIN)))
                     .addRoute(new Route("/plain-to-json",
-                            Origin.of("origin-2", "http://localhost:8081/test/plain-to-json"), PathMode.FIXED)
+                            Origin.of("origin-2", "http://localhost:8081/test/plain-to-json"))
                                     .addRequestTransformer(
                                     new RequestContentTypeModifier(APPLICATION_JSON)))
                     .addRoute(new Route("/charset-transform",
-                            Origin.of("origin-3", "http://localhost:8081/test/charset-check-encoded"), PathMode.FIXED)
+                            Origin.of("origin-3", "http://localhost:8081/test/charset-check-encoded"))
                             .addRequestTransformer(
                                     new RequestContentTypeModifier("text/plain; charset=UTF-16BE")));
         }

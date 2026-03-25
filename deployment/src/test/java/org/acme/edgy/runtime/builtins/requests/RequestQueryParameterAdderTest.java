@@ -3,7 +3,6 @@ package org.acme.edgy.runtime.builtins.requests;
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.EMPTY_QUERY_VALUE;
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.QUERY_VALUE_SEPARATOR_SYMBOL;
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.urlEncode;
-import static org.acme.edgy.runtime.builtins.assertions.QueryParamAssertions.QueryParamValueBeforeAndAfterDeserialization;
 import static org.acme.edgy.runtime.builtins.assertions.QueryParamAssertions.assertQueryParams;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
 
@@ -19,7 +18,6 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.UriInfo;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.acme.edgy.runtime.builtins.assertions.QueryParamAssertions;
@@ -54,8 +52,7 @@ class RequestQueryParameterAdderTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration()
-                            .addRoute(new Route("/values", Origin.of("origin-1", "http://localhost:8081/test/values"),
-                                            PathMode.FIXED)
+                            .addRoute(new Route("/values", Origin.of("origin-1", "http://localhost:8081/test/values"))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_1, QUERY_PARAM_VALUE_1))
                                     .addRequestTransformer(
@@ -66,8 +63,7 @@ class RequestQueryParameterAdderTest {
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_2, QUERY_PARAM_VALUE_5)))
                     .addRoute(new Route("/no-values",
-                                            Origin.of("origin-2", "http://localhost:8081/test/no-values"),
-                                            PathMode.FIXED)
+                                            Origin.of("origin-2", "http://localhost:8081/test/no-values"))
                                     .addRequestTransformer(
                                             new RequestQueryParameterAdder(QUERY_PARAM_KEY_1))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
@@ -78,15 +74,13 @@ class RequestQueryParameterAdderTest {
                                             "origin-3",
                                             "http://localhost:8081/test/query-params-in-origin-uri?existingParam=existingValue&"
                                     + encodeQueryParamSinglePair(QUERY_PARAM_KEY_1,
-                                            QUERY_PARAM_VALUE_1)),
-                            PathMode.FIXED)
+                                                                            QUERY_PARAM_VALUE_1)))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_2, QUERY_PARAM_VALUE_2))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_3, QUERY_PARAM_VALUE_4)))
                     .addRoute(new Route("/propagated-query-params",
-                                            Origin.of("origin-4", "http://localhost:8081/test/propagated-query-params"),
-                                            PathMode.FIXED)
+                                            Origin.of("origin-4", "http://localhost:8081/test/propagated-query-params"))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_1, QUERY_PARAM_VALUE_4))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
@@ -98,8 +92,7 @@ class RequestQueryParameterAdderTest {
                                                             "origin-5",
                                                             "http://localhost:8081/test/propagated-query-params-and-query-params-in-origin-uri?existingParam=existingValue&"
                                             + encodeQueryParamSinglePair(QUERY_PARAM_KEY_3,
-                                                    QUERY_PARAM_VALUE_1)),
-                            PathMode.FIXED)
+                                                                                            QUERY_PARAM_VALUE_1)))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_1, QUERY_PARAM_VALUE_1))
                                     .addRequestTransformer(

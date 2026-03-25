@@ -85,17 +85,14 @@ public class ProxyErrorResponseBuilder {
         validateStatusCode();
         ProxyResponse response = context.response().release();
         applyConfiguration(response);
-        return response.send();
+        return context.sendResponse();
     }
     // ---------------------------------------------
 
     private void applyConfiguration(ProxyResponse response) {
         response.setStatusCode(statusCode);
-
         response.putHeader(CONTENT_TYPE, TEXT_PLAIN);
-
         headers.forEach(response::putHeader);
-
         if (message != null) {
             response.setBody(Body.body(Buffer.buffer(message)));
         }

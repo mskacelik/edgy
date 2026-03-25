@@ -4,17 +4,14 @@ import java.util.function.BooleanSupplier;
 
 import org.acme.edgy.runtime.CertificateUpdateEventListener;
 import org.acme.edgy.runtime.DynamicRoutingConfigurationProvider;
-import org.acme.edgy.runtime.EdgyRecorder;
+import org.acme.edgy.runtime.OriginHttpClientManager;
 import org.acme.edgy.runtime.RouterConfigurator;
 import org.acme.edgy.runtime.config.EdgyConfig;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
-import io.quarkus.deployment.annotations.ExecutionTime;
-import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
-import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 
 class EdgyProcessor {
 
@@ -28,17 +25,8 @@ class EdgyProcessor {
     @BuildStep
     void setupAdditionalBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
         additionalBeans.produce(new AdditionalBeanBuildItem(CertificateUpdateEventListener.class));
-    }
-
-    @BuildStep
-    @Record(ExecutionTime.STATIC_INIT)
-    void setupShutdownTask(ShutdownContextBuildItem shutdown, EdgyRecorder recorder) {
-        recorder.cleanUp(shutdown);
-    }
-
-    @BuildStep
-    AdditionalBeanBuildItem addRouterConfigurator() {
-        return new AdditionalBeanBuildItem(RouterConfigurator.class);
+        additionalBeans.produce(new AdditionalBeanBuildItem(OriginHttpClientManager.class));
+        additionalBeans.produce(new AdditionalBeanBuildItem(RouterConfigurator.class));
     }
 
     @BuildStep(onlyIf = IsDynamicallyConfigured.class)

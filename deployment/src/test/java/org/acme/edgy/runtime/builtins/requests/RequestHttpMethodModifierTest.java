@@ -8,7 +8,6 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.resteasy.reactive.RestResponse;
@@ -29,7 +28,7 @@ class RequestHttpMethodModifierTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration().addRoute(new Route("/post-to-put",
-                    Origin.of("origin-1", "http://localhost:8081/test/post-to-put"), PathMode.FIXED)
+                    Origin.of("origin-1", "http://localhost:8081/test/post-to-put"))
                             .addRequestTransformer(new RequestHttpMethodModifier(HttpMethod.PUT)));
 
         }

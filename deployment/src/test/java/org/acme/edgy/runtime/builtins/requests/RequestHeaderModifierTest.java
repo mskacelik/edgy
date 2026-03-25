@@ -12,7 +12,6 @@ import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.resteasy.reactive.RestResponse;
@@ -37,11 +36,11 @@ class RequestHeaderModifierTest {
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration()
                     .addRoute(new Route("/modify-header",
-                            Origin.of("origin-1", "http://localhost:8081/test/modify-header"), PathMode.FIXED)
+                            Origin.of("origin-1", "http://localhost:8081/test/modify-header"))
                                     .addRequestTransformer(new RequestHeaderModifier(
                                             HEADER_NAME_TO_BE_CHANGED, MODIFIED_HEADER_VALUE)))
                     .addRoute(new Route("/no-header",
-                            Origin.of("origin-2", "http://localhost:8081/test/no-header"), PathMode.FIXED)
+                            Origin.of("origin-2", "http://localhost:8081/test/no-header"))
                                     .addRequestTransformer(new RequestHeaderModifier(
                                             HEADER_NAME_TO_BE_CHANGED, MODIFIED_HEADER_VALUE)));
         }

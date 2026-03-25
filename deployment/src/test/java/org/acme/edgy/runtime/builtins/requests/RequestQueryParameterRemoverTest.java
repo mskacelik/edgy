@@ -20,7 +20,6 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.UriInfo;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.acme.edgy.runtime.builtins.assertions.QueryParamAssertions;
@@ -51,19 +50,15 @@ class RequestQueryParameterRemoverTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration()
-                            .addRoute(new Route("/some", Origin.of("origin-1", "http://localhost:8081/test/some"),
-                                            PathMode.FIXED)
+                            .addRoute(new Route("/some", Origin.of("origin-1", "http://localhost:8081/test/some"))
                         .addRequestTransformer(new RequestQueryParameterRemover(QUERY_PARAM_KEY_1, QUERY_PARAM_KEY_2)))
-                            .addRoute(new Route("/all", Origin.of("origin-2", "http://localhost:8081/test/all"),
-                                            PathMode.FIXED)
+                            .addRoute(new Route("/all", Origin.of("origin-2", "http://localhost:8081/test/all"))
                         .addRequestTransformer(new RequestQueryParameterRemover(QUERY_PARAM_KEY_1, QUERY_PARAM_KEY_2, QUERY_PARAM_KEY_3)))
-                            .addRoute(new Route("/none", Origin.of("origin-3", "http://localhost:8081/test/none"),
-                                            PathMode.FIXED)
+                            .addRoute(new Route("/none", Origin.of("origin-3", "http://localhost:8081/test/none"))
                             .addRequestTransformer(new RequestQueryParameterRemover(
                                     QUERY_PARAM_KEY_1, QUERY_PARAM_KEY_2)))
                     .addRoute(new Route("/no-query",
-                                            Origin.of("origin-4", "http://localhost:8081/test/no-query"),
-                                            PathMode.FIXED)
+                                            Origin.of("origin-4", "http://localhost:8081/test/no-query"))
                                     .addRequestTransformer(new RequestQueryParameterRemover(
                                             QUERY_PARAM_KEY_1, QUERY_PARAM_KEY_2)))
                     .addRoute(new Route("/origin-query-params",
@@ -75,8 +70,7 @@ class RequestQueryParameterRemoverTest {
                                                     QUERY_PARAM_VALUE_3),
                                             encodeQueryParamSinglePair(QUERY_PARAM_KEY_2),
                                             encodeQueryParamSinglePair(QUERY_PARAM_KEY_1,
-                                                    QUERY_PARAM_VALUE_3))),
-                            PathMode.FIXED).addRequestTransformer(
+                                                    QUERY_PARAM_VALUE_3)))).addRequestTransformer(
                                     new RequestQueryParameterRemover(QUERY_PARAM_KEY_2,
                                             QUERY_PARAM_KEY_3)))
                     .addRoute(new Route("/origin-query-params-with-api-gateway-queries", Origin.of(
@@ -89,14 +83,12 @@ class RequestQueryParameterRemoverTest {
                                                     QUERY_PARAM_VALUE_3),
                                             encodeQueryParamSinglePair(QUERY_PARAM_KEY_2),
                                             encodeQueryParamSinglePair(QUERY_PARAM_KEY_1,
-                                                    QUERY_PARAM_VALUE_3))),
-                            PathMode.FIXED).addRequestTransformer(
+                                                    QUERY_PARAM_VALUE_3)))).addRequestTransformer(
                                     new RequestQueryParameterRemover(QUERY_PARAM_KEY_2,
                                             QUERY_PARAM_KEY_3)))
                     .addRoute(new Route("/add-query-param-transformer",
                                             Origin.of("origin-7",
-                                                            "http://localhost:8081/test/add-query-param-transformer"),
-                                            PathMode.FIXED)
+                                                            "http://localhost:8081/test/add-query-param-transformer"))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_1, QUERY_PARAM_VALUE_1))
                                     .addRequestTransformer(

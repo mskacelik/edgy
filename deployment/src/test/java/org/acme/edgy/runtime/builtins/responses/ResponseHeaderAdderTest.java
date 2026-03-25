@@ -8,7 +8,6 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.api.PathMode;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.jboss.resteasy.reactive.RestResponse;
@@ -33,7 +32,7 @@ class ResponseHeaderAdderTest {
         @Produces
         RoutingConfiguration routingConfiguration() {
             return new RoutingConfiguration()
-                    .addRoute(new Route("/hello", Origin.of("origin-1", "http://localhost:8081/test"), PathMode.FIXED)
+                    .addRoute(new Route("/hello", Origin.of("origin-1", "http://localhost:8081/test"))
                             .addResponseTransformer(new ResponseHeaderAdder(CUSTOM_HEADER_1, CUSTOM_HEADER_VALUE_1))
                             .addResponseTransformer(new ResponseHeaderAdder(CUSTOM_HEADER_2, CUSTOM_HEADER_VALUE_2)));
         }
