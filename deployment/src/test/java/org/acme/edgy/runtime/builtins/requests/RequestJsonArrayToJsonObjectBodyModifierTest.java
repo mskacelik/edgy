@@ -2,9 +2,9 @@ package org.acme.edgy.runtime.builtins.requests;
 
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_REQUEST;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.containsString;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
 
 import jakarta.enterprise.inject.Produces;
 import jakarta.ws.rs.Consumes;

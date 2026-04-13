@@ -2,12 +2,12 @@ package org.acme.edgy.runtime.api.utils;
 
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.INTERNAL_SERVER_ERROR;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.PAYLOAD_TOO_LARGE;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.REQUEST_TIMEOUT;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.SERVICE_UNAVAILABLE;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.TOO_MANY_REQUESTS;
+import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_REQUEST;
+import static org.acme.edgy.runtime.api.utils.StatusCode.INTERNAL_SERVER_ERROR;
+import static org.acme.edgy.runtime.api.utils.StatusCode.PAYLOAD_TOO_LARGE;
+import static org.acme.edgy.runtime.api.utils.StatusCode.SERVICE_UNAVAILABLE;
+import static org.acme.edgy.runtime.api.utils.StatusCode.TOO_MANY_REQUESTS;
+import static org.acme.edgy.runtime.api.utils.StatusCode.isError;
 
 import java.util.Objects;
 
@@ -20,7 +20,7 @@ import io.vertx.httpproxy.Body;
 import io.vertx.httpproxy.ProxyContext;
 import io.vertx.httpproxy.ProxyResponse;
 
-public class ProxyErrorResponseBuilder {
+public final class ProxyErrorResponseBuilder {
 
     private static final Logger logger = Logger.getLogger(ProxyErrorResponseBuilder.class);
 
@@ -37,7 +37,7 @@ public class ProxyErrorResponseBuilder {
         return new ProxyErrorResponseBuilder(context);
     }
 
-    public ProxyErrorResponseBuilder status(int statusCode) {
+    public ProxyErrorResponseBuilder statusCode(int statusCode) {
         this.statusCode = statusCode;
         return this;
     }
@@ -53,23 +53,19 @@ public class ProxyErrorResponseBuilder {
     }
 
     public ProxyErrorResponseBuilder badRequest() {
-        return status(BAD_REQUEST);
-    }
-
-    public ProxyErrorResponseBuilder timeout() {
-        return status(REQUEST_TIMEOUT);
+        return statusCode(BAD_REQUEST);
     }
 
     public ProxyErrorResponseBuilder payloadTooLarge() {
-        return status(PAYLOAD_TOO_LARGE);
+        return statusCode(PAYLOAD_TOO_LARGE);
     }
 
     public ProxyErrorResponseBuilder tooManyRequests() {
-        return status(TOO_MANY_REQUESTS);
+        return statusCode(TOO_MANY_REQUESTS);
     }
 
     public ProxyErrorResponseBuilder serviceUnavailable() {
-        return status(SERVICE_UNAVAILABLE);
+        return statusCode(SERVICE_UNAVAILABLE);
     }
 
     // --------------- build methods ---------------
@@ -99,7 +95,7 @@ public class ProxyErrorResponseBuilder {
     }
 
     private void validateStatusCode() {
-        if (statusCode < 400 || statusCode >= 600) {
+        if (!isError(statusCode)) {
             logger.warnf(
                     "Creating non-4xx/5xx response (%d) is discouraged, %s should only be used for error responses",
                     statusCode, this.getClass().getSimpleName());

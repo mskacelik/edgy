@@ -1,7 +1,7 @@
 package org.acme.edgy.ssl;
 
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.CoreMatchers.is;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
 
 import jakarta.enterprise.inject.Produces;
 

@@ -9,6 +9,7 @@ import jakarta.ws.rs.Path;
 import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
+import org.acme.edgy.runtime.api.utils.StatusCode;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,7 @@ class EdgyBasicPredicateTest {
         RestAssured.given()
                 .get("/hello")
                 .then()
-                .statusCode(404);
+                .statusCode(StatusCode.NOT_FOUND);
     }
 
     @Test
@@ -61,7 +62,7 @@ class EdgyBasicPredicateTest {
                 .header("X-FOO-BAR", "baz")
                 .get("/hello")
                 .then()
-                .statusCode(200)
+                .statusCode(StatusCode.OK)
                 .body(is("Hello!"));
     }
 
@@ -71,7 +72,7 @@ class EdgyBasicPredicateTest {
                 .header("X-YOLO", "Yolo!")
                 .get("/hello")
                 .then()
-                .statusCode(200)
+                .statusCode(StatusCode.OK)
                 .body(is("Hello!"));
     }
 }

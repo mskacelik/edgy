@@ -2,8 +2,8 @@ package org.acme.edgy.runtime.builtins.responses;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.CoreMatchers.is;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;

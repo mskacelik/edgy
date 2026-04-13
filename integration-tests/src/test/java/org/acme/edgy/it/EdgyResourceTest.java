@@ -3,6 +3,7 @@ package org.acme.edgy.it;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.is;
 
+import org.acme.edgy.runtime.api.StatusCode;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -15,7 +16,7 @@ public class EdgyResourceTest {
         given()
                 .when().get("/edgy")
                 .then()
-                .statusCode(200)
+                .statusCode(StatusCode.OK)
                 .body(is("Hello edgy"));
     }
 }

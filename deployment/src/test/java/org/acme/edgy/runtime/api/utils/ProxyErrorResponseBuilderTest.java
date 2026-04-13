@@ -1,8 +1,8 @@
 package org.acme.edgy.runtime.api.utils;
 
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_REQUEST;
 import static org.hamcrest.CoreMatchers.is;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
 
 import jakarta.enterprise.inject.Produces;
 import jakarta.ws.rs.GET;

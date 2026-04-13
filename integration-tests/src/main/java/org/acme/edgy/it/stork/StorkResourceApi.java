@@ -1,6 +1,6 @@
 package org.acme.edgy.it.stork;
 
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.NOT_FOUND;
+import static org.acme.edgy.runtime.api.utils.StatusCode.NOT_FOUND;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

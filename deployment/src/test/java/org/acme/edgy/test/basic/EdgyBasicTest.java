@@ -9,6 +9,7 @@ import jakarta.ws.rs.Path;
 import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
+import org.acme.edgy.runtime.api.utils.StatusCode;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class EdgyBasicTest {
         RestAssured.given()
                 .get("/hello")
                 .then()
-                .statusCode(200)
+                .statusCode(StatusCode.OK)
                 .body(is("Hello!"));
     }
 }
