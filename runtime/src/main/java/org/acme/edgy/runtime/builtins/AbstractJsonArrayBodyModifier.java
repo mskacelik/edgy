@@ -1,7 +1,7 @@
 package org.acme.edgy.runtime.builtins;
 
 import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -14,7 +14,7 @@ public abstract class AbstractJsonArrayBodyModifier
         super(mapper);
     }
 
-    protected AbstractJsonArrayBodyModifier(Function<JsonArray, JsonArray> jsonTransformer) {
+    protected AbstractJsonArrayBodyModifier(UnaryOperator<JsonArray> jsonTransformer) {
         super(jsonTransformer);
     }
 

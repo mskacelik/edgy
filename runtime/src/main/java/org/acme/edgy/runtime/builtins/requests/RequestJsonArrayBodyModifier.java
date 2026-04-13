@@ -1,7 +1,7 @@
 package org.acme.edgy.runtime.builtins.requests;
 
 import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import org.acme.edgy.runtime.api.RequestTransformer;
 import org.acme.edgy.runtime.api.utils.ProxyErrorResponseBuilder;
@@ -21,7 +21,7 @@ public class RequestJsonArrayBodyModifier extends AbstractJsonArrayBodyModifier
         super(mapper);
     }
 
-    public RequestJsonArrayBodyModifier(Function<JsonArray, JsonArray> jsonTransformer) {
+    public RequestJsonArrayBodyModifier(UnaryOperator<JsonArray> jsonTransformer) {
         super(jsonTransformer);
     }
 
@@ -46,21 +46,6 @@ public class RequestJsonArrayBodyModifier extends AbstractJsonArrayBodyModifier
         });
 
     }
-
-    // @Override
-    // protected BodyAccessor getBody(ProxyContext proxyContext) {
-    // return new BodyAccessor() {
-    // @Override
-    // public Body getBody() {
-    // return proxyContext.request().getBody();
-    // }
-
-    // @Override
-    // public void setBody(Body body) {
-    // proxyContext.request().setBody(body);
-    // }
-    // };
-    // }
 
     @Override
     protected Body getBody(ProxyContext proxyContext) {

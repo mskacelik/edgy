@@ -1,7 +1,7 @@
 package org.acme.edgy.runtime.builtins.responses;
 
 import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import org.acme.edgy.runtime.api.ResponseTransformer;
 import org.acme.edgy.runtime.api.utils.ProxyErrorResponseBuilder;
@@ -20,7 +20,7 @@ public class ResponseJsonObjectBodyModifier extends AbstractJsonObjectBodyModifi
         super(mapper);
     }
 
-    public ResponseJsonObjectBodyModifier(Function<JsonObject, JsonObject> jsonTransformer) {
+    public ResponseJsonObjectBodyModifier(UnaryOperator<JsonObject> jsonTransformer) {
         super(jsonTransformer);
     }
 
