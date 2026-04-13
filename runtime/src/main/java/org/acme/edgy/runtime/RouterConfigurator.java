@@ -63,6 +63,7 @@ public class RouterConfigurator {
                 });
             }
 
+            route.origin().guardInterceptor().ifPresent(proxy::addInterceptor);
             registerVertxRoute(router, route, proxy);
         }
     }

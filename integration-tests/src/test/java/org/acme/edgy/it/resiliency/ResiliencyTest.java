@@ -1,11 +1,11 @@
-package org.acme.edgy.it.faulttolerance;
+package org.acme.edgy.it.resiliency;
 
 import static jakarta.ws.rs.core.HttpHeaders.RETRY_AFTER;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_GATEWAY;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.REQUEST_TIMEOUT;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.SERVICE_UNAVAILABLE;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.TOO_MANY_REQUESTS;
+import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_GATEWAY;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
+import static org.acme.edgy.runtime.api.utils.StatusCode.SERVICE_UNAVAILABLE;
+import static org.acme.edgy.runtime.api.utils.StatusCode.TOO_MANY_REQUESTS;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,7 +30,7 @@ import io.restassured.RestAssured;
 import io.restassured.response.Response;
 
 @QuarkusTest
-class FaultToleranceTest {
+class ResiliencyTest {
 
     private ExecutorService executorService;
 
@@ -44,24 +44,28 @@ class FaultToleranceTest {
         this.executorService.shutdown();
     }
 
-    @Test
-    void testTimeoutSuccess() {
-        long timeout = 200L;
-        RestAssured.given().body(timeout).when().post("/blocking-timeout").then().statusCode(OK);
+    private void resetRetryCounter() {
+        RestAssured.given().when().get("/api/resiliency/retry-reset").then().statusCode(OK);
     }
 
     @Test
-    void testBlockingTimeoutFailed() {
-        long timeout = 450L;
-        RestAssured.given().when().body(timeout).post("/blocking-timeout").then().statusCode(REQUEST_TIMEOUT).and()
-                .body(Matchers.containsString("timed out"));
+    void testRetrySuccess() {
+        resetRetryCounter();
+        // maxRetries=3, so 2 failures + 1 success
+        RestAssured.given()
+                .body(2)
+                .when().post("/retry")
+                .then().statusCode(OK);
     }
 
     @Test
-    void testNonBlockingTimeoutSuccess() {
-        long timeout = 450L;
-        RestAssured.given().body(timeout).when().post("/non-blocking-timeout").then().statusCode(REQUEST_TIMEOUT).and()
-                .body(Matchers.containsString("timed out"));
+    void testRetryFailed() {
+        resetRetryCounter();
+        // maxRetries=3, so after 4 total attempts (1 + 3 retries) all fail
+        RestAssured.given()
+                .body(10)
+                .when().post("/retry")
+                .then().statusCode(not(OK));
     }
 
     @Test
@@ -148,7 +152,7 @@ class FaultToleranceTest {
 
     @Test
     void testCircuitBreaker() throws InterruptedException, ExecutionException {
-        RestAssured.given().when().get("/api/fault-tolerance/circuit-breaker-reset").then().statusCode(OK);
+        RestAssured.given().when().get("/api/resiliency/circuit-breaker-reset").then().statusCode(OK);
         // requestVolumeThreshold := 10
         // failureRatio := 0.5
         // successThreshold := 3
@@ -180,9 +184,10 @@ class FaultToleranceTest {
             tasks.add(() -> RestAssured.given().when().get("/circuit-breaker"));
         }
         List<Future<Response>> results = executorService.invokeAll(tasks);
-        // two succeds (200)
-        // one fail on a server side (502)
-        // three fail on a client side (503) => limit reached (successThreshold)
+        // two succeds (StatusCode.OK)
+        // one fail on a server side (StatusCode.BAD_GATEWAY)
+        // three fail on a client side (StatusCode.SERVICE_UNAVAILABLE) => limit reached
+        // (successThreshold)
         int countOf200 = 0;
         int countOf502 = 0;
         int countOf503 = 0;
@@ -236,21 +241,31 @@ class FaultToleranceTest {
         }
 
         // check number of invocations on the backend
-        RestAssured.given().when().get("/api/fault-tolerance/check-cb-counter").then().statusCode(OK);
+        RestAssured.given().when().get("/api/resiliency/check-cb-counter").then().statusCode(OK);
     }
 
     @Test
-    void testCircuitBreakerWithTimeout() {
-        RestAssured.given().when().get("/api/fault-tolerance/circuit-breaker-reset").then().statusCode(OK);
+    void testCircuitBreakerWithRateLimit() {
+        // rate limit: 1 request per 1000ms rolling window
+        // CB: requestVolumeThreshold=4, failureRatio=0.5, skipOn=RateLimitException
 
-        for (int i = 0; i < 4; i++) {
-            RestAssured.given().when().get("/circuit-breaker-with-timeout").then()
-                    .statusCode(REQUEST_TIMEOUT);
+        // first request succeeds
+        RestAssured.given().when().get("/circuit-breaker-with-rate-limit").then().statusCode(OK);
+
+        // next 3 requests are rate-limited
+        for (int i = 0; i < 3; i++) {
+            RestAssured.given().when().get("/circuit-breaker-with-rate-limit").then()
+                    .statusCode(TOO_MANY_REQUESTS);
         }
 
-        // NOT IN OPEN STATE
-        RestAssured.given().when().get("/circuit-breaker-with-timeout").then()
-                .statusCode(OK);
+        // CB should NOT be in OPEN state because RateLimitException is skipped
+        // wait for rate limit window to fully reset
+        try {
+            Thread.sleep(1100);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        RestAssured.given().when().get("/circuit-breaker-with-rate-limit").then().statusCode(OK);
     }
 
     @Test

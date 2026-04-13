@@ -1,7 +1,6 @@
 package org.acme.edgy.it;
 
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.REQUEST_TIMEOUT;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
@@ -11,9 +10,9 @@ import jakarta.enterprise.inject.Produces;
 import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
-import org.acme.edgy.runtime.builtins.requests.RequestFaultToleranceApplier;
-import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
+import org.acme.edgy.runtime.api.utils.StatusCode;
 
+import io.smallrye.faulttolerance.api.RateLimitException;
 import io.smallrye.faulttolerance.api.RateLimitType;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -26,7 +25,7 @@ class RoutingProvider {
     RoutingConfiguration routing() {
         return new RoutingConfigurationBuilder(new RoutingConfiguration())
                 .addRoutes(this::storkRoutes)
-                .addRoutes(this::faultToleranceRoutes)
+                .addRoutes(this::resiliencyRoutes)
                 .build();
     }
 
@@ -37,9 +36,7 @@ class RoutingProvider {
                         Origin.of("secured-stork-origin", "storks://my-secured-service/test/hello")));
     }
 
-    private RoutingConfiguration faultToleranceRoutes(RoutingConfiguration routingConfiguration) {
-        // Timeout Configuration
-        long timeoutLimitMillis = 400L;
+    private RoutingConfiguration resiliencyRoutes(RoutingConfiguration routingConfiguration) {
         // Rate Limit Configuration
         int rateLimit = 10;
         long windowMillis = 1000L;
@@ -53,76 +50,64 @@ class RoutingProvider {
         int successThreshold = 3;
 
         return routingConfiguration
-                // ----------------------------- TIMEOUT ROUTES -----------------------------
-                .addRoute(new Route("/blocking-timeout",
-                        Origin.of("blocking-timeout-origin",
-                                "http://localhost:8081/api/fault-tolerance/blocking-timeout"))
-                        .addRequestTransformer(
-                                new RequestFaultToleranceApplier(
-                                        builder -> builder.withTimeout().duration(timeoutLimitMillis, ChronoUnit.MILLIS)
-                                                .done())))
-                .addRoute(new Route("/non-blocking-timeout",
-                        Origin.of("non-blocking-timeout-origin",
-                                "http://localhost:8081/api/fault-tolerance/non-blocking-timeout"))
-                        .addRequestTransformer(
-                                new RequestFaultToleranceApplier(
-                                        builder -> builder.withTimeout().duration(timeoutLimitMillis, ChronoUnit.MILLIS)
-                                                .done())))
                 // ----------------------------- RATE LIMIT ROUTES -----------------------------
                 .addRoute(new Route("/rate-limit",
                         Origin.of("rate-limit-origin",
-                                        "http://localhost:8081/api/fault-tolerance/rate-limit"))
-                        .addRequestTransformer(
-                                new RequestFaultToleranceApplier(
-                                        builder -> builder.withRateLimit().limit(rateLimit)
-                                                .type(RateLimitType.ROLLING)
-                                                .window(windowMillis, ChronoUnit.MILLIS)
-                                                .done())))
+                                "http://localhost:8081/api/resiliency/rate-limit")
+                                .guard(adapter -> adapter.withRateLimit().limit(rateLimit)
+                                        .type(RateLimitType.ROLLING)
+                                        .window(windowMillis, ChronoUnit.MILLIS)
+                                        .done())))
                 // ----------------------------- BULKHEAD -----------------------------
                 .addRoute(new Route("/bulkhead",
                         Origin.of("bulkhead-origin",
-                                        "http://localhost:8081/api/fault-tolerance/bulkhead"))
-                        .addRequestTransformer(
-                                new RequestFaultToleranceApplier(
-                                        builder -> builder.withBulkhead()
-                                                .limit(bulkheadLimit)
-                                                .queueSize(queueSize)
-                                                .done())))
+                                "http://localhost:8081/api/resiliency/bulkhead")
+                                .guard(adapter -> adapter.withBulkhead()
+                                        .limit(bulkheadLimit)
+                                        .queueSize(queueSize)
+                                        .done())))
                 // ----------------------------- CIRCUIT BREAKER -----------------------------
                 .addRoute(new Route("/circuit-breaker",
                         Origin.of("circuit-breaker-origin",
-                                "http://localhost:8081/api/fault-tolerance/circuit-breaker"))
-                        .addRequestTransformer(
-                                new RequestFaultToleranceApplier(
-                                        builder -> builder.withCircuitBreaker()
-                                                .requestVolumeThreshold(requestVolumeThreshold)
-                                                .failureRatio(failureRatio)
-                                                .successThreshold(successThreshold)
-                                                .delay(delaySeconds, ChronoUnit.SECONDS)
-                                                .done(),
-                                        response -> response.getStatusCode() / 100 == 2)))
-                // ---------------- CB + TIMEOUT (skipOn TimeoutException) ---------------------
-                .addRoute(new Route("/circuit-breaker-with-timeout",
-                        Origin.of("circuit-breaker-with-timeout-origin",
-                                        "http://localhost:8081/api/fault-tolerance/circuit-breaker-with-timeout"))
-                        .addRequestTransformer(
-                                new RequestFaultToleranceApplier(
-                                        builder -> builder
-                                                .withTimeout().duration(timeoutLimitMillis, ChronoUnit.MILLIS).done()
-                                                .withCircuitBreaker()
-                                                .requestVolumeThreshold(4)
-                                                .failureRatio(failureRatio)
-                                                .skipOn(TimeoutException.class) // !!! IMPORTANT !!!
-                                                .done(),
-                                        response -> response.getStatusCode() / 100 <= 3
-                                                || response.getStatusCode() == REQUEST_TIMEOUT)))
-
+                                "http://localhost:8081/api/resiliency/circuit-breaker")
+                                .guard(adapter -> adapter.withCircuitBreaker()
+                                        .requestVolumeThreshold(requestVolumeThreshold)
+                                        .failureRatio(failureRatio)
+                                        .successThreshold(successThreshold)
+                                        .delay(delaySeconds, ChronoUnit.SECONDS)
+                                        .done(),
+                                        StatusCode.SC_SUCCESS)))
+                // ---------------- CB + RATE LIMIT (skipOn RateLimitException) ---------------------
+                .addRoute(new Route("/circuit-breaker-with-rate-limit",
+                        Origin.of("circuit-breaker-with-rate-limit-origin",
+                                "http://localhost:8081/api/resiliency/rate-limit")
+                                .guard(adapter -> {
+                                    adapter.withRateLimit()
+                                            .limit(1)
+                                            .window(windowMillis, ChronoUnit.MILLIS)
+                                            .type(RateLimitType.FIXED)
+                                            .done();
+                                    adapter.withCircuitBreaker()
+                                            .requestVolumeThreshold(4)
+                                            .failureRatio(failureRatio)
+                                            .skipOn(RateLimitException.class)
+                                            .done();
+                                }, StatusCode.SC_SUCCESS)))
+                // ----------------------------- RETRY -----------------------------
+                .addRoute(new Route("/retry",
+                        Origin.of("retry-origin",
+                                "http://localhost:8081/api/resiliency/retry")
+                                .guard(adapter -> adapter.withRetry()
+                                        .maxRetries(3)
+                                        .delay(0, ChronoUnit.MILLIS)
+                                        .jitter(0, ChronoUnit.MILLIS)
+                                        .done(),
+                                        StatusCode.SC_SUCCESS)))
                 // ----------------------------- FALLBACK -----------------------------
                 .addRoute(new Route("/with-fallback",
                         Origin.of("with-fallback-origin",
-                                "http://localhost:8081/api/non-existing-endpoint"))
-                        .addRequestTransformer(
-                                new RequestFaultToleranceApplier((proxyContext, builder) -> builder
+                                "http://localhost:8081/api/non-existing-endpoint")
+                                .guard((proxyContext, adapter) -> adapter
                                         .withFallback()
                                         .handler(() -> {
                                             ProxyResponse fallbackResponse = proxyContext.request().release()

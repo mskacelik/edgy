@@ -1,6 +1,5 @@
-package org.acme.edgy.it.faulttolerance;
+package org.acme.edgy.it.resiliency;
 
-import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import jakarta.ws.rs.GET;
@@ -9,27 +8,27 @@ import jakarta.ws.rs.Path;
 
 import org.jboss.resteasy.reactive.RestResponse;
 
-import io.smallrye.mutiny.Uni;
+@Path("/api/resiliency")
+class ResiliencyResourceApi {
 
-@Path("/api/fault-tolerance")
-class FaultToleranceResourceApi {
-
+    private final AtomicInteger retryCounter = new AtomicInteger();
     private final AtomicInteger circuitBreakerInvocationCounter = new AtomicInteger();
 
     @POST
-    @Path("/blocking-timeout")
-    public RestResponse<Void> blockingTimeout(Long timeout) throws InterruptedException {
-        Thread.sleep(timeout);
+    @Path("/retry")
+    public RestResponse<Void> retry(Long failCount) {
+        if (retryCounter.incrementAndGet() <= failCount) {
+            return RestResponse.serverError();
+        }
         return RestResponse.ok();
     }
 
-    @POST
-    @Path("/non-blocking-timeout")
-    public Uni<RestResponse<Void>> nonBlockingTimeout(Long timeout) {
-        return Uni.createFrom().nullItem().onItem().delayIt().by(Duration.ofMillis(timeout))
-                .replaceWith(RestResponse.ok());
+    @GET
+    @Path("/retry-reset")
+    public RestResponse<Void> retryReset() {
+        retryCounter.set(0);
+        return RestResponse.ok();
     }
-
 
     @GET
     @Path("/rate-limit")
@@ -85,14 +84,5 @@ class FaultToleranceResourceApi {
             return RestResponse.ok();
         }
         return RestResponse.serverError();
-    }
-
-    @GET
-    @Path("/circuit-breaker-with-timeout")
-    public RestResponse<Void> circuitBreakerWithTimeout() throws InterruptedException {
-        if (circuitBreakerInvocationCounter.incrementAndGet() < 5) {
-            Thread.sleep(500); // (limit is 400ms)
-        }
-        return RestResponse.ok();
     }
 }
