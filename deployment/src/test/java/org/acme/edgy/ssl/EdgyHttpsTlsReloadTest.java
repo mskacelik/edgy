@@ -1,8 +1,8 @@
 package org.acme.edgy.ssl;
 
+import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_GATEWAY;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.CoreMatchers.is;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_GATEWAY;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;

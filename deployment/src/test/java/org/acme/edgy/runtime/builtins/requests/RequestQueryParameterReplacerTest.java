@@ -3,8 +3,8 @@ package org.acme.edgy.runtime.builtins.requests;
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.EMPTY_QUERY_VALUE;
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.QUERY_VALUE_SEPARATOR_SYMBOL;
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.urlEncode;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.acme.edgy.runtime.builtins.assertions.QueryParamAssertions.assertQueryParams;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;

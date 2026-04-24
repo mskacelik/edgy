@@ -1,8 +1,8 @@
 package org.acme.edgy.runtime.builtins.requests;
 
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.INTERNAL_SERVER_ERROR;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
+import static org.acme.edgy.runtime.api.utils.StatusCode.INTERNAL_SERVER_ERROR;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;

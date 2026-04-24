@@ -1,9 +1,9 @@
 package org.acme.edgy.test.regex;
 
 import static org.acme.edgy.runtime.api.PathMode.REGEXP;
+import static org.acme.edgy.runtime.api.utils.StatusCode.NOT_FOUND;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.is;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.NOT_FOUND;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;

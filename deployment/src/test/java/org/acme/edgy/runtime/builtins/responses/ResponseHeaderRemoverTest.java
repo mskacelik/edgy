@@ -1,7 +1,7 @@
 package org.acme.edgy.runtime.builtins.responses;
 
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.nullValue;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;

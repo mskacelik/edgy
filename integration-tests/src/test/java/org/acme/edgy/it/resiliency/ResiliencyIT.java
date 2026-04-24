@@ -1,7 +1,7 @@
-package org.acme.edgy.it;
+package org.acme.edgy.it.resiliency;
 
 import io.quarkus.test.junit.QuarkusIntegrationTest;
 
 @QuarkusIntegrationTest
-public class EdgyResourceIT extends EdgyResourceTest {
+class ResiliencyIT extends ResiliencyTest {
 }

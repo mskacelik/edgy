@@ -1,15 +1,17 @@
 package org.acme.edgy.test.basic;
 
+import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_GATEWAY;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.is;
 
 import jakarta.enterprise.inject.Produces;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.QueryParam;
 
 import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
-import org.acme.edgy.runtime.api.utils.StatusCode;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
@@ -18,19 +20,14 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
 
-class EdgyBasicPredicateTest {
+class EdgyIdleTimeoutTest {
 
     static class RoutingProvider {
 
         @Produces
-        RoutingConfiguration predicatesRouting() {
+        RoutingConfiguration basicRouting() {
             return new RoutingConfiguration()
-                    .addRoute(new Route("/hello", Origin.of("origin-1", "http://localhost:8081/test/hello"))
-                            .setPredicate(
-                                    rc -> "baz".equals(rc.request().getHeader(
-                                            "X-FOO-BAR"))))
-                    .addRoute(new Route("/hello", Origin.of("origin-2", "http://localhost:8081/test/hello"))
-                            .setPredicate(rc -> true && rc.request().getHeader("X-YOLO") != null));
+                    .addRoute(new Route("/hello", Origin.of("origin-1", "http://localhost:8081/test/hello")));
         }
     }
 
@@ -38,41 +35,38 @@ class EdgyBasicPredicateTest {
     static class TestApi {
 
         @GET
-        public String hello() {
+        public String hello(@QueryParam("delay") long delay) {
+            try {
+                Thread.sleep(delay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             return "Hello!";
         }
     }
 
     @RegisterExtension
     static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+            .overrideConfigKey("edgy.origin.origin-1.idle-timeout", "1")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 
     @Test
-    void test_helloProxy_no_header() {
+    void test_helloProxy_ok() {
         RestAssured.given()
+                .queryParam("delay", 100)
                 .get("/hello")
                 .then()
-                .statusCode(StatusCode.NOT_FOUND);
-    }
-
-    @Test
-    public void test_helloProxy_with_header() {
-        RestAssured.given()
-                .header("X-FOO-BAR", "baz")
-                .get("/hello")
-                .then()
-                .statusCode(StatusCode.OK)
+                .statusCode(OK)
                 .body(is("Hello!"));
     }
 
     @Test
-    public void test_helloProxy_fallback() {
+    void test_helloProxy_timeout() {
         RestAssured.given()
-                .header("X-YOLO", "Yolo!")
+                .queryParam("delay", 2000)
                 .get("/hello")
                 .then()
-                .statusCode(StatusCode.OK)
-                .body(is("Hello!"));
+                .statusCode(BAD_GATEWAY); // should probably be 504
     }
 }

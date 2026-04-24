@@ -5,7 +5,7 @@ import static org.acme.edgy.it.stork.StorkResourceApi.FIRST_SECURED_SERVICE_PORT
 import static org.acme.edgy.it.stork.StorkResourceApi.FIRST_SERVICE_PORT;
 import static org.acme.edgy.it.stork.StorkResourceApi.SECOND_SECURED_SERVICE_PORT;
 import static org.acme.edgy.it.stork.StorkResourceApi.SECOND_SERVICE_PORT;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;

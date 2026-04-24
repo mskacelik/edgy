@@ -3,11 +3,11 @@ package org.acme.edgy.runtime.builtins.responses;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_REQUEST;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.is;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;

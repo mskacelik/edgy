@@ -1,9 +1,9 @@
 package org.acme.edgy.runtime.builtins.responses;
 
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
+import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
+import static org.acme.edgy.runtime.api.utils.StatusCode.PAYLOAD_TOO_LARGE;
 import static org.hamcrest.Matchers.containsString;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.OK;
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.PAYLOAD_TOO_LARGE;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;

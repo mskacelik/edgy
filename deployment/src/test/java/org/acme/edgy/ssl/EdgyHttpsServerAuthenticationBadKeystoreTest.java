@@ -1,6 +1,6 @@
 package org.acme.edgy.ssl;
 
-import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_GATEWAY;
+import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_GATEWAY;
 
 import jakarta.enterprise.inject.Produces;
 
