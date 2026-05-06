@@ -6,6 +6,7 @@ import java.util.function.Function;
 import org.acme.edgy.runtime.api.ResponseTransformer;
 import org.acme.edgy.runtime.api.utils.ProxyErrorResponseBuilder;
 import org.acme.edgy.runtime.builtins.transformers.AbstractJsonArrayToJsonObjectBodyModifier;
+import org.acme.edgy.runtime.builtins.transformers.BodySizeLimitExceededException;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.DecodeException;
@@ -37,6 +38,12 @@ public class ResponseJsonArrayToJsonObjectBodyModifier
             if (throwable instanceof DecodeException) {
                 return ProxyErrorResponseBuilder.create(proxyContext)
                         .badRequest()
+                        .message(throwable.getMessage())
+                        .sendResponseInResponseTransformer();
+            }
+            if (throwable instanceof BodySizeLimitExceededException) {
+                return ProxyErrorResponseBuilder.create(proxyContext)
+                        .payloadTooLarge()
                         .message(throwable.getMessage())
                         .sendResponseInResponseTransformer();
             }

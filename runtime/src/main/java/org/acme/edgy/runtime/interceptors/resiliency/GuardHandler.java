@@ -7,15 +7,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import org.acme.edgy.runtime.api.utils.ProxyErrorResponseBuilder;
+import org.acme.edgy.runtime.builtins.transformers.BodyAccumulator;
+import org.acme.edgy.runtime.builtins.transformers.BodySizeLimitExceededException;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 
 import io.smallrye.faulttolerance.api.RateLimitException;
 import io.smallrye.faulttolerance.api.TypedGuard;
 import io.vertx.core.Expectation;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.streams.ReadStream;
 import io.vertx.httpproxy.Body;
 import io.vertx.httpproxy.ProxyContext;
 import io.vertx.httpproxy.ProxyInterceptor;
@@ -69,6 +68,14 @@ public class GuardHandler implements ProxyInterceptor {
             } catch (Exception e) {
                 return Future.failedFuture(e);
             }
+        }).recover(throwable -> {
+            if (throwable instanceof BodySizeLimitExceededException) {
+                return ProxyErrorResponseBuilder.create(context)
+                        .payloadTooLarge()
+                        .message(throwable.getMessage())
+                        .sendResponseInRequestTransformer();
+            }
+            return Future.failedFuture(throwable);
         });
     }
 
@@ -77,17 +84,10 @@ public class GuardHandler implements ProxyInterceptor {
         if (body == null) {
             return Future.succeededFuture();
         }
-        ReadStream<Buffer> stream = body.stream();
-        Buffer collected = Buffer.buffer();
-        Promise<Void> promise = Promise.promise();
-        stream.handler(collected::appendBuffer);
-        stream.endHandler(v -> {
+        return BodyAccumulator.readBodyBuffer(body).map(collected -> {
             proxyRequest.setBody(Body.body(collected));
-            promise.complete();
+            return null;
         });
-        stream.exceptionHandler(promise::fail);
-        stream.resume();
-        return promise.future();
     }
 
     private GuardContainer getOrInitialize(ProxyContext proxyContext) {

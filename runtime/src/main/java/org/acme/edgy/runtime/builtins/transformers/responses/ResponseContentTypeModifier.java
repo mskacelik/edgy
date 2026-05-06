@@ -1,6 +1,5 @@
 package org.acme.edgy.runtime.builtins.transformers.responses;
 
-import static jakarta.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 
 import java.nio.charset.Charset;
@@ -11,9 +10,11 @@ import java.util.function.Function;
 import jakarta.ws.rs.core.MediaType;
 
 import org.acme.edgy.runtime.api.ResponseTransformer;
+import org.acme.edgy.runtime.api.utils.ProxyErrorResponseBuilder;
+import org.acme.edgy.runtime.builtins.transformers.BodyAccumulator;
+import org.acme.edgy.runtime.builtins.transformers.BodySizeLimitExceededException;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.httpproxy.Body;
 import io.vertx.httpproxy.ProxyContext;
@@ -65,31 +66,25 @@ public class ResponseContentTypeModifier implements ResponseTransformer {
         if (!prevCharset.equals(newCharset)) {
             Body body = proxyContext.response().getBody();
             if (body != null) {
-                return readBodyBuffer(body).compose(bodyBuffer -> {
+                return BodyAccumulator.readBodyBuffer(body).compose(bodyBuffer -> {
                     String content = bodyBuffer.toString(prevCharset);
                     Buffer reEncodedBuffer = Buffer.buffer(content.getBytes(newCharset));
 
-                    proxyContext.response().headers().set(CONTENT_LENGTH, String.valueOf(reEncodedBuffer.length()));
                     proxyContext.response().setBody(Body.body(reEncodedBuffer));
 
                     return proxyContext.sendResponse();
+                }).recover(throwable -> {
+                    if (throwable instanceof BodySizeLimitExceededException) {
+                        return ProxyErrorResponseBuilder.create(proxyContext)
+                                .payloadTooLarge()
+                                .message(throwable.getMessage())
+                                .sendResponseInResponseTransformer();
+                    }
+                    return Future.failedFuture(throwable);
                 });
             }
         }
 
         return proxyContext.sendResponse();
-    }
-
-    private Future<Buffer> readBodyBuffer(Body body) {
-        Promise<Buffer> promise = Promise.promise();
-        Buffer accumulator = Buffer.buffer();
-
-        body.stream().handler(chunk -> {
-            if (chunk != null) {
-                accumulator.appendBuffer(chunk);
-            }
-        }).endHandler(v -> promise.complete(accumulator)).exceptionHandler(promise::fail).resume();
-
-        return promise.future();
     }
 }

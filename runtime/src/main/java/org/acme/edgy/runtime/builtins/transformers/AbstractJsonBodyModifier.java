@@ -5,7 +5,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.httpproxy.Body;
@@ -55,7 +54,7 @@ public abstract class AbstractJsonBodyModifier<I, O> {
             return sender.apply(proxyContext);
         }
 
-        return readBodyBuffer(body).compose(bodyBuffer -> {
+        return BodyAccumulator.readBodyBuffer(body).compose(bodyBuffer -> {
             I oldJson = bufferToInputJson(bodyBuffer);
             O newJson = mapper.apply(proxyContext, oldJson);
 
@@ -68,19 +67,6 @@ public abstract class AbstractJsonBodyModifier<I, O> {
 
             return sender.apply(proxyContext);
         });
-    }
-
-    private Future<Buffer> readBodyBuffer(Body body) {
-        Promise<Buffer> promise = Promise.promise();
-        Buffer accumulator = Buffer.buffer();
-
-        body.stream().handler(chunk -> {
-            if (chunk != null) {
-                accumulator.appendBuffer(chunk);
-            }
-        }).endHandler(v -> promise.complete(accumulator)).exceptionHandler(promise::fail).resume();
-
-        return promise.future();
     }
 
     protected abstract I bufferToInputJson(Buffer buffer) throws DecodeException;
