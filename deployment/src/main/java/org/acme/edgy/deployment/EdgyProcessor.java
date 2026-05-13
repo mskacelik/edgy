@@ -7,11 +7,15 @@ import org.acme.edgy.runtime.DynamicRoutingConfigurationProvider;
 import org.acme.edgy.runtime.OriginHttpClientManager;
 import org.acme.edgy.runtime.RouterConfigurator;
 import org.acme.edgy.runtime.config.EdgyConfig;
+import org.acme.edgy.runtime.tracing.TracingProxyObserver;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.deployment.Capabilities;
+import io.quarkus.deployment.Capability;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.runtime.configuration.ConfigurationException;
 
 class EdgyProcessor {
 
@@ -41,6 +45,27 @@ class EdgyProcessor {
         @Override
         public boolean getAsBoolean() {
             return config.mode() == EdgyConfig.Mode.CONFIGURATION;
+        }
+    }
+
+    @BuildStep(onlyIf = IsTracingEnabled.class)
+    void setupTracingObserver(Capabilities capabilities,
+            BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
+        if (!capabilities.isPresent(Capability.OPENTELEMETRY_TRACER)) {
+            throw new ConfigurationException(
+                    "edgy.tracing.enabled=true requires the quarkus-opentelemetry extension. "
+                            + "Please add 'io.quarkus:quarkus-opentelemetry' to your dependencies.");
+        }
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(TracingProxyObserver.class));
+    }
+
+    static class IsTracingEnabled implements BooleanSupplier {
+
+        EdgyConfig config;
+
+        @Override
+        public boolean getAsBoolean() {
+            return config.tracing().enabled();
         }
     }
 }

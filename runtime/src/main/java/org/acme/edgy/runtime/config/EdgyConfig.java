@@ -32,4 +32,18 @@ public interface EdgyConfig {
     @WithName("origin")
     Map<String, EdgyOriginConfig> origins();
 
+    /**
+     * Tracing configuration.
+     */
+    TracingConfig tracing();
+
+    interface TracingConfig {
+
+        /**
+         * Whether to enable tracing.
+         */
+        @WithDefault("false")
+        boolean enabled();
+    }
+
 }
