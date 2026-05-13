@@ -1,16 +1,21 @@
 package org.acme.edgy.runtime;
 
+import java.util.List;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
+import org.acme.edgy.runtime.api.ProxyObserver;
 import org.acme.edgy.runtime.api.RequestTransformer;
 import org.acme.edgy.runtime.api.ResponseTransformer;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
+import org.acme.edgy.runtime.interceptors.ObservingProxyInterceptor;
 import org.acme.edgy.runtime.interceptors.QueryParamPropagationInterceptor;
 import org.acme.edgy.runtime.interceptors.UriTemplateInterceptor;
 
+import io.quarkus.arc.All;
 import io.quarkus.arc.DefaultBean;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
@@ -31,12 +36,17 @@ public class RouterConfigurator {
     @Inject
     OriginHttpClientManager originHttpClientManager;
 
+    @Inject
+    @All
+    List<ProxyObserver> observers;
+
     void configure(@Observes Router router) {
         for (Route route : routingConfiguration.routes()) {
             HttpClient httpClient = originHttpClientManager.getOrCreateHttpClient(route.origin());
 
             HttpProxy proxy = HttpProxy.reverseProxy(httpClient)
                     .origin(route.origin().originRequestProvider());
+            addInterceptor(proxy, new ObservingProxyInterceptor(observers, route), !observers.isEmpty());
             addInterceptor(proxy, new UriTemplateInterceptor(route));
             addInterceptor(proxy, new QueryParamPropagationInterceptor());
 
