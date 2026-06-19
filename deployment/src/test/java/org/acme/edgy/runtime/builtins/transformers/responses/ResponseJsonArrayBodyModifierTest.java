@@ -9,8 +9,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.is;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
@@ -22,7 +22,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -31,11 +31,11 @@ class ResponseJsonArrayBodyModifierTest {
 
     private static final String ORIGINAL_JSON = "[\"Lorem\",\"Ipsum\",\"Dolor\",\"Sit\",\"Amet\"]";
 
-    @ApplicationScoped
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration().addRoute(new Route("/remove-element",
+            return RoutingConfiguration.builder().addRoute(new Route("/remove-element",
                     Origin.of("origin-1", "http://localhost:8081/test/remove-element"))
                             .addResponseTransformer(new ResponseJsonArrayBodyModifier(json -> {
                                 json.remove(1); // Remove "Ipsum"
@@ -69,7 +69,7 @@ class ResponseJsonArrayBodyModifierTest {
                     .addRoute(new Route("/invalid-json",
                             Origin.of("origin-7", "http://localhost:8081/test/invalid-json"))
                                     .addResponseTransformer(
-                                            new ResponseJsonArrayBodyModifier(json -> json)));
+                                            new ResponseJsonArrayBodyModifier(json -> json))).build();
         }
     }
 
@@ -126,8 +126,8 @@ class ResponseJsonArrayBodyModifierTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest =
-            new QuarkusUnitTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
+    private static final QuarkusExtensionTest extensionTest =
+            new QuarkusExtensionTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 
     @Test

@@ -4,6 +4,7 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.CoreMatchers.is;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
 import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.Route;
@@ -12,7 +13,7 @@ import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.smallrye.certs.Format;
 import io.smallrye.certs.junit5.Certificate;
@@ -31,14 +32,15 @@ class EdgyHttpsServerAuthenticationCorrectTruststoreTest {
 
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration().addRoute(new Route("/secure",
-                    Origin.of("origin-1", ORIGIN_URI)));
+            return RoutingConfiguration.builder().addRoute(new Route("/secure",
+                    Origin.of("origin-1", ORIGIN_URI))).build();
         }
     }
 
     @RegisterExtension
-    static QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .withApplicationRoot(jar -> jar.addClasses(RoutingProvider.class, HttpsServer.class)
                     .addAsResource(new StringAsset(CONFIGURATION), "application.properties"));
 

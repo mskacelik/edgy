@@ -3,8 +3,8 @@ package org.acme.edgy.runtime.builtins.transformers.responses;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.nullValue;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
@@ -17,7 +17,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class ResponseHeaderRemoverTest {
@@ -27,14 +27,14 @@ class ResponseHeaderRemoverTest {
     private static final String CUSTOM_HEADER_VALUE_1 = "Yolo";
     private static final String CUSTOM_HEADER_VALUE_2 = "abc";
 
-    @ApplicationScoped
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/hello", Origin.of("origin-1", "http://localhost:8081/test"))
-                            .addResponseTransformer(new ResponseHeaderRemover(CUSTOM_HEADER_1)));
+                            .addResponseTransformer(new ResponseHeaderRemover(CUSTOM_HEADER_1))).build();
         }
     }
 
@@ -51,7 +51,7 @@ class ResponseHeaderRemoverTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 

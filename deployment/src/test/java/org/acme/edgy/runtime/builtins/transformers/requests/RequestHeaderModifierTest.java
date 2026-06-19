@@ -4,8 +4,8 @@ import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.acme.edgy.runtime.api.utils.StatusCode.INTERNAL_SERVER_ERROR;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
@@ -20,7 +20,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class RequestHeaderModifierTest {
@@ -30,11 +30,11 @@ class RequestHeaderModifierTest {
     private static final String ORIGINAL_HEADER_VALUE = "original";
     private static final String MODIFIED_HEADER_VALUE = "changed";
 
-    @ApplicationScoped
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/modify-header",
                             Origin.of("origin-1", "http://localhost:8081/test/modify-header"))
                                     .addRequestTransformer(new RequestHeaderModifier(
@@ -42,7 +42,7 @@ class RequestHeaderModifierTest {
                     .addRoute(new Route("/no-header",
                             Origin.of("origin-2", "http://localhost:8081/test/no-header"))
                                     .addRequestTransformer(new RequestHeaderModifier(
-                                            HEADER_NAME_TO_BE_CHANGED, MODIFIED_HEADER_VALUE)));
+                                            HEADER_NAME_TO_BE_CHANGED, MODIFIED_HEADER_VALUE))).build();
         }
     }
 
@@ -75,8 +75,8 @@ class RequestHeaderModifierTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest =
-            new QuarkusUnitTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
+    private static final QuarkusExtensionTest extensionTest =
+            new QuarkusExtensionTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 
     @Test

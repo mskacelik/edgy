@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.is;
 import java.util.regex.Pattern;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
@@ -18,7 +19,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class EdgyHeaderPredicateTest {
@@ -26,12 +27,13 @@ class EdgyHeaderPredicateTest {
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration routing() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/header-exact", Origin.of("header-exact", "http://localhost:8081/test/hello"))
                             .setPredicate(new HeaderPredicate("X-Api-Version", "v2")))
                     .addRoute(new Route("/header-regex", Origin.of("header-regex", "http://localhost:8081/test/hello"))
-                            .setPredicate(new HeaderPredicate("X-Request-Id", Pattern.compile("\\d+"))));
+                            .setPredicate(new HeaderPredicate("X-Request-Id", Pattern.compile("\\d+")))).build();
         }
     }
 
@@ -46,7 +48,7 @@ class EdgyHeaderPredicateTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 

@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
@@ -30,7 +30,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class RequestQueryParameterRemoverTest {
@@ -44,12 +44,12 @@ class RequestQueryParameterRemoverTest {
     private static final String QUERY_PARAM_VALUE_2 = "?&2";
     private static final String QUERY_PARAM_VALUE_3 = "?&3";
 
-    @ApplicationScoped
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                             .addRoute(new Route("/some", Origin.of("origin-1", "http://localhost:8081/test/some"))
                         .addRequestTransformer(new RequestQueryParameterRemover(QUERY_PARAM_KEY_1, QUERY_PARAM_KEY_2)))
                             .addRoute(new Route("/all", Origin.of("origin-2", "http://localhost:8081/test/all"))
@@ -92,7 +92,7 @@ class RequestQueryParameterRemoverTest {
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_1, QUERY_PARAM_VALUE_1))
                                     .addRequestTransformer(
-                                            new RequestQueryParameterRemover(QUERY_PARAM_KEY_1)));
+                                            new RequestQueryParameterRemover(QUERY_PARAM_KEY_1))).build();
         }
     }
 
@@ -174,7 +174,7 @@ class RequestQueryParameterRemoverTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class, QueryParamAssertions.class));
 

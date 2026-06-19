@@ -6,12 +6,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 import org.acme.edgy.runtime.api.Origin;
-import org.acme.edgy.runtime.config.EdgyConfig;
 import org.acme.edgy.runtime.config.EdgyOriginConfig;
+import org.acme.edgy.runtime.config.EdgyRuntimeConfig;
 import org.jboss.logging.Logger;
 
 import io.quarkus.runtime.configuration.ConfigurationException;
@@ -21,7 +20,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 
-@ApplicationScoped
+@Singleton
 public class OriginHttpClientManager {
 
     private static final Logger logger = Logger.getLogger(OriginHttpClientManager.class);
@@ -29,14 +28,16 @@ public class OriginHttpClientManager {
     private final Map<String, Origin> origins = new HashMap<>();
     private final Map<String, List<HttpClient>> tlsConfigToHttpClients = new HashMap<>();
 
-    @Inject
-    Vertx vertx;
+    private final Vertx vertx;
+    private final TlsConfigurationRegistry tlsConfigurationRegistry;
+    private final EdgyRuntimeConfig edgyRuntimeConfig;
 
-    @Inject
-    TlsConfigurationRegistry tlsConfigurationRegistry;
-
-    @Inject
-    EdgyConfig edgyConfig;
+    OriginHttpClientManager(Vertx vertx, TlsConfigurationRegistry tlsConfigurationRegistry,
+            EdgyRuntimeConfig edgyRuntimeConfig) {
+        this.vertx = vertx;
+        this.tlsConfigurationRegistry = tlsConfigurationRegistry;
+        this.edgyRuntimeConfig = edgyRuntimeConfig;
+    }
 
     public HttpClient getOrCreateHttpClient(Origin origin) {
         Origin existingOrigin = origins.get(origin.identifier());
@@ -56,7 +57,7 @@ public class OriginHttpClientManager {
         }
 
         HttpClientOptions options = new HttpClientOptions();
-        EdgyOriginConfig originConfig = edgyConfig.origins().get(origin.identifier());
+        EdgyOriginConfig originConfig = edgyRuntimeConfig.origins().get(origin.identifier());
         if (originConfig != null) {
             configureHttpClientOptions(options, originConfig);
         }

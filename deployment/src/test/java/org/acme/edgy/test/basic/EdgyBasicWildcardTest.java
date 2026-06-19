@@ -5,6 +5,7 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.is;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.UriInfo;
@@ -17,7 +18,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class EdgyBasicWildcardTest {
@@ -25,8 +26,9 @@ class EdgyBasicWildcardTest {
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration basicRouting() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/v1/*",
                             Origin.of("origin-1", "http://localhost:8081/test/dump/{requestURI}")))
                     .addRoute(new Route("/v2/*",
@@ -35,7 +37,7 @@ class EdgyBasicWildcardTest {
                     .addRoute(new Route("/v3/*",
                             Origin.of("origin-3", "http://localhost:8081/test/dump")))
                     .addRoute(new Route("/api/{version}/*",
-                            Origin.of("origin-4", "http://localhost:8081/test/dump/{version}/{suffix}")));
+                            Origin.of("origin-4", "http://localhost:8081/test/dump/{version}/{suffix}"))).build();
         }
     }
 
@@ -49,7 +51,7 @@ class EdgyBasicWildcardTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, DumpApi.class));
 

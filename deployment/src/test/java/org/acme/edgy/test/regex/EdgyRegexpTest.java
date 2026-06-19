@@ -5,8 +5,8 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.NOT_FOUND;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.is;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
@@ -18,16 +18,16 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class EdgyRegExpTest {
 
-    @ApplicationScoped
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routing() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/[a-c]+/.*", Origin.of("origin-1", "http://localhost:8081/test"),
                             REGEXP))
                     .addRoute(new Route("/user/[0-9]+/profile",
@@ -37,7 +37,7 @@ class EdgyRegExpTest {
                     .addRoute(new Route("/complex/([a-z]+)-(\\d{2,4})/item/(foo|bar)",
                             Origin.of("origin-4", "http://localhost:8081/test"), REGEXP))
                     .addRoute(new Route("/multi/.*/end",
-                            Origin.of("origin-5", "http://localhost:8081/test"), REGEXP));
+                            Origin.of("origin-5", "http://localhost:8081/test"), REGEXP)).build();
         }
     }
 
@@ -51,8 +51,8 @@ class EdgyRegExpTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest =
-            new QuarkusUnitTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
+    private static final QuarkusExtensionTest extensionTest =
+            new QuarkusExtensionTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 
     @Test

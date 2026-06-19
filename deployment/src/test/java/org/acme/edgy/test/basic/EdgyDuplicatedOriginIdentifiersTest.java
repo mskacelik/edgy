@@ -3,6 +3,7 @@ package org.acme.edgy.test.basic;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
 import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.Route;
@@ -12,22 +13,23 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 
 class EdgyDuplicatedOriginIdentifiersTest {
 
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration basicRouting() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(
                             new Route("/hello", Origin.of("duplicated-origin-id", "http://localhost:8081/test/hello")))
-                    .addRoute(new Route("/hi", Origin.of("duplicated-origin-id", "http://localhost:8081/test/hi")));
+                    .addRoute(new Route("/hi", Origin.of("duplicated-origin-id", "http://localhost:8081/test/hi"))).build();
         }
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class))
             .setExpectedException(IllegalStateException.class);

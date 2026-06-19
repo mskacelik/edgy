@@ -1,7 +1,9 @@
 package org.acme.edgy.runtime.api.utils;
 
 import io.smallrye.stork.Stork;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.httpproxy.ProxyContext;
@@ -9,9 +11,10 @@ import io.vertx.httpproxy.ProxyContext;
 public interface StorkUtils {
 
     static Future<HttpClientRequest> storkFuture(String serviceName, ProxyContext proxyContext, boolean useTls) {
+        Context vertxContext = Vertx.currentContext();
         return Future.fromCompletionStage(
                 getInstance().getService(serviceName).selectInstance()
-                        .convert().toCompletionStage())
+                        .convert().toCompletionStage(), vertxContext)
                 .compose(serviceInstance -> proxyContext.client().request(new RequestOptions()
                         .setHost(serviceInstance.getHost())
                         .setPort(serviceInstance.getPort())

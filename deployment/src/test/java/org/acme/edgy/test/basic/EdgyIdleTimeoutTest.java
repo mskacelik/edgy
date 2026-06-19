@@ -5,6 +5,7 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.is;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
@@ -17,7 +18,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class EdgyIdleTimeoutTest {
@@ -25,9 +26,10 @@ class EdgyIdleTimeoutTest {
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration basicRouting() {
-            return new RoutingConfiguration()
-                    .addRoute(new Route("/hello", Origin.of("origin-1", "http://localhost:8081/test/hello")));
+            return RoutingConfiguration.builder()
+                    .addRoute(new Route("/hello", Origin.of("origin-1", "http://localhost:8081/test/hello"))).build();
         }
     }
 
@@ -46,7 +48,7 @@ class EdgyIdleTimeoutTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .overrideConfigKey("edgy.origin.origin-1.idle-timeout", "1")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));

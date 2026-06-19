@@ -2,8 +2,8 @@ package org.acme.edgy.runtime.builtins.transformers.requests;
 
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 
@@ -16,20 +16,20 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.http.HttpMethod;
 
 class RequestHttpMethodModifierTest {
 
-    @ApplicationScoped
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration().addRoute(new Route("/post-to-put",
+            return RoutingConfiguration.builder().addRoute(new Route("/post-to-put",
                     Origin.of("origin-1", "http://localhost:8081/test/post-to-put"))
-                            .addRequestTransformer(new RequestHttpMethodModifier(HttpMethod.PUT)));
+                            .addRequestTransformer(new RequestHttpMethodModifier(HttpMethod.PUT))).build();
 
         }
     }
@@ -45,8 +45,8 @@ class RequestHttpMethodModifierTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest =
-            new QuarkusUnitTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
+    private static final QuarkusExtensionTest extensionTest =
+            new QuarkusExtensionTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 
     @Test

@@ -5,6 +5,7 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.is;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -19,7 +20,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class EdgyBasicSegmentTest {
@@ -27,8 +28,9 @@ class EdgyBasicSegmentTest {
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration basicRouting() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/reverse/{a}/{b}",
                             Origin.of("origin-1", "http://localhost:8081/test/{b}/{a}")))
                     .addRoute(new Route("/three/{segment}",
@@ -50,7 +52,7 @@ class EdgyBasicSegmentTest {
                     .addRoute(new Route("/backref/{a}/{a}",
                             Origin.of("origin-10", "http://localhost:8081/test/same/{a}")))
                     .addRoute(new Route("/backref/{a}/{b}",
-                            Origin.of("origin-11", "http://localhost:8081/test/diff/{a}/{b}")));
+                            Origin.of("origin-11", "http://localhost:8081/test/diff/{a}/{b}"))).build();
         }
     }
 
@@ -132,7 +134,7 @@ class EdgyBasicSegmentTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 

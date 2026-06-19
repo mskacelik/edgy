@@ -6,8 +6,8 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_REQUEST;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.containsString;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
@@ -22,7 +22,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.json.JsonArray;
 
@@ -30,11 +30,11 @@ class RequestJsonObjectToJsonArrayBodyModifierTest {
 
     private static final String ORIGINAL_JSON = "{\"1\":\"Lorem\",\"2\":\"Ipsum\",\"3\":\"Dolor\"}";
 
-    @ApplicationScoped
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration().addRoute(new Route("/object-to-array",
+            return RoutingConfiguration.builder().addRoute(new Route("/object-to-array",
                     Origin.of("origin-1", "http://localhost:8081/test/object-to-array"))
                             .addRequestTransformer(
                                     new RequestJsonObjectToJsonArrayBodyModifier(json -> {
@@ -56,7 +56,7 @@ class RequestJsonObjectToJsonArrayBodyModifierTest {
                             Origin.of("origin-3", "http://localhost:8081/test/object-to-empty"))
                                     .addRequestTransformer(
                                             new RequestJsonObjectToJsonArrayBodyModifier(
-                                                    json -> null)));
+                                                    json -> null))).build();
         }
     }
 
@@ -99,8 +99,8 @@ class RequestJsonObjectToJsonArrayBodyModifierTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest =
-            new QuarkusUnitTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
+    private static final QuarkusExtensionTest extensionTest =
+            new QuarkusExtensionTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 
     @Test

@@ -7,8 +7,8 @@ import static org.hamcrest.Matchers.is;
 
 import java.util.function.UnaryOperator;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -23,7 +23,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.json.JsonObject;
 
@@ -31,11 +31,11 @@ class BodyAccumulatorSizeLimitTest {
 
     private static final int MAX_BODY_SIZE = 16;
 
-    @ApplicationScoped
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/request-limit",
                             Origin.of("origin-1", "http://localhost:8081/test/echo"))
                             .addRequestTransformer(
@@ -43,7 +43,7 @@ class BodyAccumulatorSizeLimitTest {
                     .addRoute(new Route("/response-limit",
                             Origin.of("origin-2", "http://localhost:8081/test/large-response"))
                             .addResponseTransformer(
-                                    new ResponseJsonObjectBodyModifier(UnaryOperator.identity())));
+                                    new ResponseJsonObjectBodyModifier(UnaryOperator.identity()))).build();
         }
     }
 
@@ -63,7 +63,7 @@ class BodyAccumulatorSizeLimitTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .overrideConfigKey("quarkus.http.limits.max-body-size", MAX_BODY_SIZE + "")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));

@@ -6,8 +6,8 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_REQUEST;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.containsString;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
@@ -22,7 +22,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -33,11 +33,11 @@ class RequestJsonObjectBodyModifierTest {
             "{\"1\":\"Lorem\",\"2\":\"Ipsum\",\"3\":[\"Dolor\",\"Sit\",\"Amet\"]}";
 
 
-    @ApplicationScoped
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration().addRoute(new Route("/remove-field",
+            return RoutingConfiguration.builder().addRoute(new Route("/remove-field",
                     Origin.of("origin-1", "http://localhost:8081/test/remove-field"))
                             .addRequestTransformer(new RequestJsonObjectBodyModifier(json -> {
                                 json.remove("2");
@@ -68,7 +68,7 @@ class RequestJsonObjectBodyModifierTest {
                             Origin.of("origin-6", "http://localhost:8081/test/replace-full"))
                                     .addRequestTransformer(new RequestJsonObjectBodyModifier(
                                             new JsonObject().put("replaced", "yes").put("arr",
-                                                    new JsonArray().add(1).add(2)))));
+                                                    new JsonArray().add(1).add(2))))).build();
         }
     }
 
@@ -154,8 +154,8 @@ class RequestJsonObjectBodyModifierTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest =
-            new QuarkusUnitTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
+    private static final QuarkusExtensionTest extensionTest =
+            new QuarkusExtensionTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 
     @Test

@@ -9,8 +9,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.is;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
@@ -22,7 +22,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.json.JsonObject;
 
@@ -30,11 +30,11 @@ class ResponseJsonArrayToJsonObjectBodyModifierTest {
 
     private static final String ORIGINAL_JSON = "[\"Lorem\",\"Ipsum\",\"Dolor\",\"Sit\",\"Amet\"]";
 
-    @ApplicationScoped
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration().addRoute(new Route("/array-to-object",
+            return RoutingConfiguration.builder().addRoute(new Route("/array-to-object",
                     Origin.of("origin-1", "http://localhost:8081/test/array-to-object"))
                             .addResponseTransformer(
                                     new ResponseJsonArrayToJsonObjectBodyModifier(json -> {
@@ -64,7 +64,7 @@ class ResponseJsonArrayToJsonObjectBodyModifierTest {
                                                 JsonObject obj = new JsonObject();
                                                 obj.put("data", json);
                                                 return obj;
-                                            })));
+                                            }))).build();
         }
     }
 
@@ -100,8 +100,8 @@ class ResponseJsonArrayToJsonObjectBodyModifierTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest =
-            new QuarkusUnitTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
+    private static final QuarkusExtensionTest extensionTest =
+            new QuarkusExtensionTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 
     @Test

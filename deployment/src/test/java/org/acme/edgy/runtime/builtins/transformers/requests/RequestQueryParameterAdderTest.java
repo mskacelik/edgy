@@ -9,8 +9,8 @@ import static org.acme.edgy.runtime.builtins.transformers.assertions.QueryParamA
 import java.util.List;
 import java.util.Map;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
@@ -28,7 +28,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class RequestQueryParameterAdderTest {
@@ -47,11 +47,11 @@ class RequestQueryParameterAdderTest {
     static record SomeClass(String value) {
     }
 
-    @ApplicationScoped
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                             .addRoute(new Route("/values", Origin.of("origin-1", "http://localhost:8081/test/values"))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
                                             QUERY_PARAM_KEY_1, QUERY_PARAM_VALUE_1))
@@ -99,7 +99,7 @@ class RequestQueryParameterAdderTest {
                                             new RequestQueryParameterAdder(QUERY_PARAM_KEY_2,
                                                     QUERY_PARAM_VALUE_3, QUERY_PARAM_VALUE_2))
                                     .addRequestTransformer(new RequestQueryParameterAdder(
-                                            QUERY_PARAM_KEY_3, QUERY_PARAM_VALUE_4)));
+                                            QUERY_PARAM_KEY_3, QUERY_PARAM_VALUE_4))).build();
         }
     }
 
@@ -255,8 +255,8 @@ class RequestQueryParameterAdderTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest =
-            new QuarkusUnitTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
+    private static final QuarkusExtensionTest extensionTest =
+            new QuarkusExtensionTest().setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class, QueryParamAssertions.class));
 
     @Test

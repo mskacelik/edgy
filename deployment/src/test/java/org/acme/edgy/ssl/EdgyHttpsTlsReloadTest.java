@@ -13,6 +13,7 @@ import java.util.UUID;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.Route;
@@ -23,7 +24,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.quarkus.tls.CertificateUpdatedEvent;
 import io.quarkus.tls.TlsConfiguration;
 import io.quarkus.tls.TlsConfigurationRegistry;
@@ -44,19 +45,19 @@ class EdgyHttpsTlsReloadTest {
 
     static class RoutingProvider {
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
-            return new RoutingConfiguration().addRoute(new Route("/secure",
-                    Origin.of("origin-1", ORIGIN_URI)));
+            return RoutingConfiguration.builder().addRoute(new Route("/secure",
+                    Origin.of("origin-1", ORIGIN_URI))).build();
         }
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(HttpsServer.class, RoutingProvider.class))
             .overrideRuntimeConfigKey("loc", temp.getAbsolutePath())
-            .overrideRuntimeConfigKey("edgy.origin.origin-1.tls-configuration-name",
-                    TLS_BUCKET_NAME)
+            .overrideRuntimeConfigKey("edgy.origin.origin-1.tls-configuration-name", TLS_BUCKET_NAME)
             .overrideRuntimeConfigKey("quarkus.tls." + TLS_BUCKET_NAME + ".key-store.p12.path",
                     temp.getAbsolutePath() + "/tls.p12")
             .overrideRuntimeConfigKey("quarkus.tls." + TLS_BUCKET_NAME + ".key-store.p12.password",

@@ -5,6 +5,7 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_REQUEST;
 import static org.hamcrest.CoreMatchers.is;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
@@ -20,7 +21,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 import io.vertx.core.Future;
 import io.vertx.httpproxy.ProxyContext;
@@ -31,6 +32,7 @@ class ProxyErrorResponseBuilderTest {
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration routingConfiguration() {
 
             RequestTransformer requestAssertFailure = new RequestTransformer() {
@@ -70,7 +72,7 @@ class ProxyErrorResponseBuilderTest {
                 }
             };
 
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/request-transformer",
                             Origin.of("origin-1", "origin uri is never called"))
                             .addRequestTransformer(requestTransformerInvokingBadRequest) // new response
@@ -79,7 +81,7 @@ class ProxyErrorResponseBuilderTest {
                     .addRoute(new Route("/response-transformer",
                             Origin.of("origin-2", "http://localhost:8081/test/response-transformer"))
                             .addResponseTransformer(responseTransformerInvokingBadRequest) // new response
-                            .addResponseTransformer(responseTransfomerAddsHeader)); // is reached
+                            .addResponseTransformer(responseTransfomerAddsHeader)).build(); // is reached
 
         }
     }
@@ -94,7 +96,7 @@ class ProxyErrorResponseBuilderTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest().setArchiveProducer(
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest().setArchiveProducer(
             () -> ShrinkWrap.create(JavaArchive.class).addClasses(RoutingProvider.class));
 
     private static final String HEADER = "x-added-in-response-transformer";

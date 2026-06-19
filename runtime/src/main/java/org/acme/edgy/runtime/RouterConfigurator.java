@@ -1,17 +1,20 @@
 package org.acme.edgy.runtime;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
-import jakarta.inject.Inject;
+import java.util.List;
 
+import jakarta.enterprise.context.Dependent;
+import jakarta.enterprise.event.Observes;
+
+import org.acme.edgy.runtime.api.ProxyObserver;
 import org.acme.edgy.runtime.api.RequestTransformer;
 import org.acme.edgy.runtime.api.ResponseTransformer;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
+import org.acme.edgy.runtime.interceptors.ObservingProxyInterceptor;
 import org.acme.edgy.runtime.interceptors.QueryParamPropagationInterceptor;
 import org.acme.edgy.runtime.interceptors.UriTemplateInterceptor;
 
-import io.quarkus.arc.DefaultBean;
+import io.quarkus.arc.All;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.ext.web.Router;
@@ -21,15 +24,20 @@ import io.vertx.httpproxy.ProxyContext;
 import io.vertx.httpproxy.ProxyInterceptor;
 import io.vertx.httpproxy.ProxyResponse;
 
-@ApplicationScoped
-@DefaultBean
+@Dependent
 public class RouterConfigurator {
 
-    @Inject
-    RoutingConfiguration routingConfiguration;
+    private final RoutingConfiguration routingConfiguration;
+    private final OriginHttpClientManager originHttpClientManager;
+    private final List<ProxyObserver> observers;
 
-    @Inject
-    OriginHttpClientManager originHttpClientManager;
+    RouterConfigurator(RoutingConfiguration routingConfiguration,
+            OriginHttpClientManager originHttpClientManager,
+            @All List<ProxyObserver> observers) {
+        this.routingConfiguration = routingConfiguration;
+        this.originHttpClientManager = originHttpClientManager;
+        this.observers = observers;
+    }
 
     void configure(@Observes Router router) {
         for (Route route : routingConfiguration.routes()) {
@@ -37,6 +45,7 @@ public class RouterConfigurator {
 
             HttpProxy proxy = HttpProxy.reverseProxy(httpClient)
                     .origin(route.origin().originRequestProvider());
+            addInterceptor(proxy, new ObservingProxyInterceptor(observers, route), !observers.isEmpty());
             addInterceptor(proxy, new UriTemplateInterceptor(route));
             addInterceptor(proxy, new QueryParamPropagationInterceptor());
 

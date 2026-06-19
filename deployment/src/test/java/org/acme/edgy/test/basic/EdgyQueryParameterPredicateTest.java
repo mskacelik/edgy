@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.is;
 import java.util.regex.Pattern;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
@@ -18,7 +19,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class EdgyQueryParameterPredicateTest {
@@ -26,14 +27,15 @@ class EdgyQueryParameterPredicateTest {
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration routing() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/query-exists", Origin.of("query-exists", "http://localhost:8081/test/hello"))
                             .setPredicate(new QueryParameterPredicate("debug")))
                     .addRoute(new Route("/query-exact", Origin.of("query-exact", "http://localhost:8081/test/hello"))
                             .setPredicate(new QueryParameterPredicate("version", "2")))
                     .addRoute(new Route("/query-regex", Origin.of("query-regex", "http://localhost:8081/test/hello"))
-                            .setPredicate(new QueryParameterPredicate("token", Pattern.compile("[a-f0-9]{8}"))));
+                            .setPredicate(new QueryParameterPredicate("token", Pattern.compile("[a-f0-9]{8}")))).build();
         }
     }
 
@@ -48,7 +50,7 @@ class EdgyQueryParameterPredicateTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 

@@ -6,6 +6,7 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.hamcrest.Matchers.is;
 
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -18,7 +19,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.test.QuarkusUnitTest;
+import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
 
 class EdgyRegExpSegmentTest {
@@ -26,8 +27,9 @@ class EdgyRegExpSegmentTest {
     static class RoutingProvider {
 
         @Produces
+        @Singleton
         RoutingConfiguration routing() {
-            return new RoutingConfiguration()
+            return RoutingConfiguration.builder()
                     .addRoute(new Route("/regexp/(?<userId>[0-9]+)/(?<action>[a-z]+)",
                             Origin.of("origin-1", "http://localhost:8081/test/{action}/{userId}"), REGEXP))
                     .addRoute(new Route("/echo/(?<word>[a-z]+)",
@@ -35,7 +37,7 @@ class EdgyRegExpSegmentTest {
                     .addRoute(new Route("/span/(?<middle>.*)/end",
                             Origin.of("origin-3", "http://localhost:8081/test/{middle}"), REGEXP))
                     .addRoute(new Route("/back/(?<x>[^/]+)/\\k<x>",
-                            Origin.of("origin-4", "http://localhost:8081/test/{x}"), REGEXP));
+                            Origin.of("origin-4", "http://localhost:8081/test/{x}"), REGEXP)).build();
         }
     }
 
@@ -56,7 +58,7 @@ class EdgyRegExpSegmentTest {
     }
 
     @RegisterExtension
-    static final QuarkusUnitTest unitTest = new QuarkusUnitTest()
+    private static final QuarkusExtensionTest extensionTest = new QuarkusExtensionTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClasses(RoutingProvider.class, TestApi.class));
 
