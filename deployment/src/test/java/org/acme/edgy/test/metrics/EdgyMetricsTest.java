@@ -1,11 +1,9 @@
 package org.acme.edgy.test.metrics;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -65,9 +63,9 @@ class EdgyMetricsTest {
 
         await().atMost(2, TimeUnit.SECONDS).untilAsserted(() -> {
             Timer timer = search.timer();
-            assertNotNull(timer, "Timer should be registered for proxied request");
-            assertEquals(1, timer.count());
-            assertTrue(timer.totalTime(TimeUnit.MILLISECONDS) > 0, "Duration should be recorded");
+            assertThat(timer).as("Timer should be registered for proxied request").isNotNull();
+            assertThat(timer.count()).isEqualTo(1);
+            assertThat(timer.totalTime(TimeUnit.MILLISECONDS)).as("Duration should be recorded").isGreaterThan(0);
         });
     }
 
@@ -86,8 +84,8 @@ class EdgyMetricsTest {
 
         await().atMost(2, TimeUnit.SECONDS).untilAsserted(() -> {
             Timer timer = search.timer();
-            assertNotNull(timer, "Timer should be registered for 5xx proxy response");
-            assertEquals(1, timer.count());
+            assertThat(timer).as("Timer should be registered for 5xx proxy response").isNotNull();
+            assertThat(timer.count()).isEqualTo(1);
         });
     }
 
@@ -96,10 +94,10 @@ class EdgyMetricsTest {
         Gauge routeGauge = registry.find("edgy.routes.count").gauge();
         Gauge originGauge = registry.find("edgy.origins.count").gauge();
 
-        assertNotNull(routeGauge, "Route count gauge should be registered");
-        assertNotNull(originGauge, "Origin count gauge should be registered");
-        assertEquals(2.0, routeGauge.value(), "Should report 2 routes");
-        assertEquals(2.0, originGauge.value(), "Should report 2 unique origins");
+        assertThat(routeGauge).as("Route count gauge should be registered").isNotNull();
+        assertThat(originGauge).as("Origin count gauge should be registered").isNotNull();
+        assertThat(routeGauge.value()).as("Should report 2 routes").isEqualTo(2.0);
+        assertThat(originGauge.value()).as("Should report 2 unique origins").isEqualTo(2.0);
     }
 
     static class RoutingProvider {

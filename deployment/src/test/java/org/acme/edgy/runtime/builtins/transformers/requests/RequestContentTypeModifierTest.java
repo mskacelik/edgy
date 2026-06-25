@@ -5,7 +5,7 @@ import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 
@@ -115,8 +115,8 @@ class RequestContentTypeModifierTest {
 
     @Test
     void test_contentLengthUpdatedAfterTranscode() {
-        assertEquals(1, COPYRIGHT.getBytes(StandardCharsets.ISO_8859_1).length);
-        assertEquals(2, COPYRIGHT.getBytes(StandardCharsets.UTF_16BE).length);
+        assertThat(COPYRIGHT.getBytes(StandardCharsets.ISO_8859_1)).hasSize(1);
+        assertThat(COPYRIGHT.getBytes(StandardCharsets.UTF_16BE)).hasSize(2);
 
         RestAssured.given()
                 .contentType("text/plain; charset=ISO-8859-1")

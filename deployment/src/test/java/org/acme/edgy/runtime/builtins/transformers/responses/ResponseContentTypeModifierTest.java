@@ -3,8 +3,8 @@ package org.acme.edgy.runtime.builtins.transformers.responses;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;
 
@@ -93,13 +93,13 @@ class ResponseContentTypeModifierTest {
     void test_responseReplacesPlainToJson() {
         Payload actualPayload = RestAssured.given().get("/plain-to-json").then().statusCode(OK)
                 .and().contentType(APPLICATION_JSON).extract().as(Payload.class);
-        assertEquals(payloadObject, actualPayload);
+        assertThat(actualPayload).isEqualTo(payloadObject);
     }
 
     @Test
     void test_contentLengthUpdatedAfterTranscode() {
-        assertEquals(1, COPYRIGHT.getBytes(StandardCharsets.ISO_8859_1).length);
-        assertEquals(2, COPYRIGHT.getBytes(StandardCharsets.UTF_16BE).length);
+        assertThat(COPYRIGHT.getBytes(StandardCharsets.ISO_8859_1)).hasSize(1);
+        assertThat(COPYRIGHT.getBytes(StandardCharsets.UTF_16BE)).hasSize(2);
         RestAssured.given()
                 .get("/charset-transform")
                 .then()

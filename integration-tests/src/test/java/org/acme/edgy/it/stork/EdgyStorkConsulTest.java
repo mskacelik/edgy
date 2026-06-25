@@ -6,7 +6,7 @@ import static org.acme.edgy.it.stork.StorkResourceApi.FIRST_SERVICE_PORT;
 import static org.acme.edgy.it.stork.StorkResourceApi.SECOND_SECURED_SERVICE_PORT;
 import static org.acme.edgy.it.stork.StorkResourceApi.SECOND_SERVICE_PORT;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -66,7 +66,7 @@ class EdgyStorkConsulTest {
         String firstCallBody = assertTestEndpointAndGetBody("/test");
         int firstOrSecondIndex = (expectedBodies.indexOf(firstCallBody) + 1) % 2;
         for (int i = firstOrSecondIndex; i < 9 + firstOrSecondIndex; i++) {
-            assertEquals(expectedBodies.get(i % 2), assertTestEndpointAndGetBody("/test"));
+            assertThat(assertTestEndpointAndGetBody("/test")).isEqualTo(expectedBodies.get(i % 2));
         }
     }
 
@@ -75,7 +75,7 @@ class EdgyStorkConsulTest {
         String firstCallBody = assertTestEndpointAndGetBody("/test-secured");
         int firstOrSecondIndex = (expectedSecuredBodies.indexOf(firstCallBody) + 1) % 2;
         for (int i = firstOrSecondIndex; i < 9 + firstOrSecondIndex; i++) {
-            assertEquals(expectedSecuredBodies.get(i % 2), assertTestEndpointAndGetBody("/test-secured"));
+            assertThat(assertTestEndpointAndGetBody("/test-secured")).isEqualTo(expectedSecuredBodies.get(i % 2));
         }
     }
 

@@ -1,8 +1,8 @@
 package org.acme.edgy.test.logging;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.logging.Level;
 
@@ -15,6 +15,7 @@ import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.acme.edgy.runtime.api.utils.StatusCode;
+import org.assertj.core.api.SoftAssertions;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
@@ -36,28 +37,41 @@ class EdgyLoggingTest {
             .overrideConfigKey("edgy.logging.enabled", "true")
             .setLogRecordPredicate(rec -> rec.getLoggerName().contains("LoggingProxyObserver"))
             .assertLogRecords(records -> {
-                assertTrue(records.size() >= 2,
-                        "Expected at least 2 log records from LoggingProxyObserver");
+                assertThat(records).as("Expected at least 2 log records from LoggingProxyObserver")
+                        .hasSizeGreaterThanOrEqualTo(2);
 
-                var successRec = records.stream()
-                        .filter(r -> String.format(r.getMessage(), r.getParameters()).contains("status=200"))
-                        .findFirst()
-                        .orElseThrow(() -> new AssertionError("No INFO log with status=200 found"));
-                String successMsg = String.format(successRec.getMessage(), successRec.getParameters());
-                assertTrue(successMsg.contains(HELLO_ROUTE_PATH), "Log should contain route path");
-                assertTrue(successMsg.contains(HELLO_ORIGIN_ID), "Log should contain origin identifier");
-                assertTrue(successMsg.contains("ms"), "Log should contain duration");
+                assertThat(records)
+                        .withFailMessage("No INFO log with status=200 found")
+                        .filteredOn(r -> String.format(r.getMessage(), r.getParameters()).contains("status=200"))
+                        .first()
+                        .satisfies(successRec -> {
+                            String msg = String.format(successRec.getMessage(), successRec.getParameters());
+                            SoftAssertions.assertSoftly(softly -> {
+                                softly.assertThat(msg).as("Log should contain route path").contains(HELLO_ROUTE_PATH);
+                                softly.assertThat(msg).as("Log should contain origin identifier")
+                                        .contains(HELLO_ORIGIN_ID);
+                                softly.assertThat(msg).as("Log should contain duration").contains("ms");
+                            });
+                        });
 
-                var errorRec = records.stream()
-                        .filter(r -> String.format(r.getMessage(), r.getParameters()).contains("status=502"))
-                        .findFirst()
-                        .orElseThrow(() -> new AssertionError("No WARN log with status=502 found"));
-                assertTrue(errorRec.getLevel().intValue() >= Level.WARNING.intValue(),
-                        "5xx responses should be logged at WARN, but was: " + errorRec.getLevel());
-                String errorMsg = String.format(errorRec.getMessage(), errorRec.getParameters());
-                assertTrue(errorMsg.contains(UNREACHABLE_ROUTE_PATH), "Log should contain route path");
-                assertTrue(errorMsg.contains(UNREACHABLE_ORIGIN_ID), "Log should contain origin identifier");
-                assertTrue(errorMsg.contains("ms"), "Log should contain duration");
+                assertThat(records)
+                        .withFailMessage("No WARN log with status=502 found")
+                        .filteredOn(r -> String.format(r.getMessage(), r.getParameters()).contains("status=502"))
+                        .first()
+                        .satisfies(errorRec -> {
+                            String msg = String.format(errorRec.getMessage(), errorRec.getParameters());
+                            SoftAssertions.assertSoftly(softly -> {
+                                softly.assertThat(errorRec.getLevel().intValue())
+                                        .as("5xx responses should be logged at WARN, but was: %s",
+                                                errorRec.getLevel())
+                                        .isGreaterThanOrEqualTo(Level.WARNING.intValue());
+                                softly.assertThat(msg).as("Log should contain route path")
+                                        .contains(UNREACHABLE_ROUTE_PATH);
+                                softly.assertThat(msg).as("Log should contain origin identifier")
+                                        .contains(UNREACHABLE_ORIGIN_ID);
+                                softly.assertThat(msg).as("Log should contain duration").contains("ms");
+                            });
+                        });
             });
 
     @Test

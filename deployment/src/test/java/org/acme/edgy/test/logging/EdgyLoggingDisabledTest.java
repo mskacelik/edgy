@@ -1,8 +1,8 @@
 package org.acme.edgy.test.logging;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Singleton;
@@ -28,8 +28,9 @@ class EdgyLoggingDisabledTest {
                     .addClasses(RoutingProvider.class, TestApi.class))
             .overrideConfigKey("edgy.logging.enabled", "false")
             .setLogRecordPredicate(rec -> rec.getLoggerName().contains("LoggingProxyObserver"))
-            .assertLogRecords(rec -> assertTrue(rec.isEmpty(),
-                    "No log records expected when logging is disabled, but found: " + rec));
+            .assertLogRecords(rec -> assertThat(rec)
+                    .as("No log records expected when logging is disabled")
+                    .isEmpty());
 
     @Test
     void test_proxyWorksWithoutLogging() {
