@@ -12,6 +12,7 @@ import org.jboss.resteasy.reactive.RestResponse;
 class ResiliencyResourceApi {
 
     private final AtomicInteger retryCounter = new AtomicInteger();
+    private final AtomicInteger retryFallbackCounter = new AtomicInteger();
     private final AtomicInteger circuitBreakerInvocationCounter = new AtomicInteger();
 
     @POST
@@ -84,5 +85,31 @@ class ResiliencyResourceApi {
             return RestResponse.ok();
         }
         return RestResponse.serverError();
+    }
+
+    @GET
+    @Path("/circuit-breaker-fallback")
+    public RestResponse<Void> circuitBreakerFallback() {
+        return RestResponse.serverError();
+    }
+
+    @GET
+    @Path("/retry-fallback")
+    public RestResponse<Void> retryFallback() {
+        retryFallbackCounter.incrementAndGet();
+        return RestResponse.serverError();
+    }
+
+    @GET
+    @Path("/retry-fallback-reset")
+    public RestResponse<Void> retryFallbackReset() {
+        retryFallbackCounter.set(0);
+        return RestResponse.ok();
+    }
+
+    @GET
+    @Path("/retry-fallback-counter")
+    public RestResponse<Integer> retryFallbackCounterValue() {
+        return RestResponse.ok(retryFallbackCounter.get());
     }
 }

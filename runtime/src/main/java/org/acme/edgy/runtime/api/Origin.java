@@ -1,23 +1,12 @@
 package org.acme.edgy.runtime.api;
 
-import static org.acme.edgy.runtime.api.utils.StatusCode.SC_NON_ERROR;
 import static org.acme.edgy.runtime.api.utils.StorkUtils.storkFuture;
 
 import java.util.Objects;
-import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
-import org.acme.edgy.runtime.interceptors.resiliency.GuardHandler;
-import org.acme.edgy.runtime.interceptors.resiliency.ResiliencyBuilder;
-
-import io.vertx.core.Expectation;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.httpproxy.OriginRequestProvider;
-import io.vertx.httpproxy.ProxyContext;
-import io.vertx.httpproxy.ProxyInterceptor;
-import io.vertx.httpproxy.ProxyResponse;
 
 public final class Origin {
 
@@ -40,8 +29,6 @@ public final class Origin {
     private final String path;
 
     private HttpClient httpClient;
-
-    private GuardHandler guardHandler;
 
     private Origin(String identifier, Protocol protocol, String host, int port, String path) {
         this.identifier = identifier;
@@ -113,29 +100,6 @@ public final class Origin {
             case http, https -> proxyContext.client().request(new RequestOptions().setHost(host)
                     .setPort(port).setSsl(protocol == Protocol.https));
         };
-    }
-
-    public Origin guard(Consumer<ResiliencyBuilder> configurator) {
-        return guard((proxyContext, builder) -> configurator.accept(builder));
-    }
-
-    public Origin guard(Consumer<ResiliencyBuilder> configurator, Expectation<ProxyResponse> expectation) {
-        return guard((proxyContext, builder) -> configurator.accept(builder), expectation);
-    }
-
-    public Origin guard(BiConsumer<ProxyContext, ResiliencyBuilder> configurator) {
-        this.guardHandler = new GuardHandler(configurator, SC_NON_ERROR);
-        return this;
-    }
-
-    public Origin guard(BiConsumer<ProxyContext, ResiliencyBuilder> configurator,
-            Expectation<ProxyResponse> expectation) {
-        this.guardHandler = new GuardHandler(configurator, expectation);
-        return this;
-    }
-
-    public Optional<ProxyInterceptor> guardInterceptor() {
-        return Optional.ofNullable(guardHandler);
     }
 
     public String uri() {

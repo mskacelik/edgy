@@ -29,7 +29,7 @@ import io.restassured.RestAssured;
 import io.restassured.response.Response;
 
 @QuarkusTest
-class ResiliencyTest {
+class SmallRyeFaultToleranceGuardHandlerTest {
 
     private ExecutorService executorService;
 
@@ -276,5 +276,47 @@ class ResiliencyTest {
     void testFallback() {
         RestAssured.given().when().get("/with-fallback").then().statusCode(OK).and()
                 .body(Matchers.equalTo("Fallback response"));
+    }
+
+    @Test
+    void testRateLimitWithFallback() {
+        // rate limit: 1 request per 1000ms fixed window
+        // first request succeeds normally
+        RestAssured.given().when().get("/rate-limit-with-fallback").then().statusCode(OK);
+
+        // second request hits rate limit but fallback catches it
+        RestAssured.given().when().get("/rate-limit-with-fallback").then().statusCode(OK).and()
+                .body(Matchers.equalTo("Rate limit fallback"));
+    }
+
+    @Test
+    void testCircuitBreakerWithFallback() {
+        // CB: requestVolumeThreshold=4, failureRatio=0.5, delay=10s
+        // backend always returns 500, expectation is SC_SUCCESS so all count as failures
+        // first 4 requests fail at backend — CB monitors but stays closed
+        for (int i = 0; i < 4; i++) {
+            RestAssured.given().when().get("/circuit-breaker-with-fallback").then().statusCode(OK).and()
+                    .body(Matchers.equalTo("Circuit breaker fallback"));
+        }
+
+        // CB should now be open (4 requests, all failures, ratio = 1.0 > 0.5)
+        // next request is rejected by CB, fallback catches it
+        RestAssured.given().when().get("/circuit-breaker-with-fallback").then().statusCode(OK).and()
+                .body(Matchers.equalTo("Circuit breaker fallback"));
+    }
+
+    @Test
+    void testRetryWithFallback() {
+        RestAssured.given().when().get("/api/resiliency/retry-fallback-reset").then().statusCode(OK);
+
+        // retry: maxRetries=2 (3 total attempts), backend always returns 500
+        // all attempts fail, fallback catches the final failure
+        RestAssured.given().when().get("/retry-with-fallback").then().statusCode(OK).and()
+                .body(Matchers.equalTo("Retry fallback"));
+
+        // verify backend was hit exactly 3 times (1 initial + 2 retries)
+        String counter = RestAssured.given().when().get("/api/resiliency/retry-fallback-counter")
+                .then().statusCode(OK).extract().body().asString();
+        assertThat(counter).as("Backend should be hit 3 times (1 initial + 2 retries)").isEqualTo("3");
     }
 }
