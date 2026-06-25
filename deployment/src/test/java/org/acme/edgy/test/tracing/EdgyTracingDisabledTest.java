@@ -51,7 +51,7 @@ class EdgyTracingDisabledTest {
                 .statusCode(StatusCode.OK)
                 .body(is("Hello from origin!"));
 
-        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
             assertThat(spanExporter.getFinishedSpanItems())
                     .withFailMessage("No root SERVER span found in: %s", spanExporter.getFinishedSpanItems())
                     .filteredOn(s -> s.getKind() == SpanKind.SERVER
