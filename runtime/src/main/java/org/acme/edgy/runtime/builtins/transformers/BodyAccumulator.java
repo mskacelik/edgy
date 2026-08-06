@@ -16,7 +16,10 @@ public final class BodyAccumulator {
     }
 
     public static Future<Buffer> readBodyBuffer(Body body) {
-        long maxBodySize = getMaxBodySize();
+        return readBodyBuffer(body, getMaxBodySize());
+    }
+
+    public static Future<Buffer> readBodyBuffer(Body body, long maxBodySize) {
         Promise<Buffer> promise = Promise.promise();
         Buffer accumulator = Buffer.buffer();
 
@@ -24,7 +27,7 @@ public final class BodyAccumulator {
             if (chunk != null) {
                 if (accumulator.length() + chunk.length() > maxBodySize) {
                     promise.fail(new BodySizeLimitExceededException(
-                            "Body size exceeded the configured limit of " + maxBodySize + " bytes"));
+                            "Body size exceeded the limit of " + maxBodySize + " bytes"));
                     return;
                 }
                 accumulator.appendBuffer(chunk);
