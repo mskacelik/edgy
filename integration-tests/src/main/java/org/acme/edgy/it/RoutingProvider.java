@@ -3,6 +3,7 @@ package org.acme.edgy.it;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 
 import java.time.temporal.ChronoUnit;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import jakarta.enterprise.inject.Produces;
@@ -51,6 +52,9 @@ class RoutingProvider {
         int delaySeconds = 1;
         int successThreshold = 3;
 
+        BiFunction<ProxyContext, Throwable, Future<ProxyResponse>> fallback = (ctx,
+                throwable) -> fallbackResponse(ctx, "Fallback response");
+
         return builder
                 // ----------------------------- RATE LIMIT -----------------------------
                 .addRoute(new Route("/rate-limit",
@@ -78,8 +82,8 @@ class RoutingProvider {
                                         .failureRatio(failureRatio)
                                         .successThreshold(successThreshold)
                                         .delay(delaySeconds, ChronoUnit.SECONDS))
-                                .build(),
-                                StatusCode.SC_SUCCESS))
+                                .withExpectation(StatusCode.SC_SUCCESS)
+                                .build()))
                 // ---------------- CB + RATE LIMIT (skipOn RateLimitException) ---------------------
                 .addRoute(new Route("/circuit-breaker-with-rate-limit",
                         Origin.of("circuit-breaker-with-rate-limit-origin",
@@ -93,8 +97,8 @@ class RoutingProvider {
                                         .requestVolumeThreshold(4)
                                         .failureRatio(failureRatio)
                                         .skipOn(RateLimitException.class))
-                                .build(),
-                                StatusCode.SC_SUCCESS))
+                                .withExpectation(StatusCode.SC_SUCCESS)
+                                .build()))
                 // ----------------------------- RETRY -----------------------------
                 .addRoute(new Route("/retry",
                         Origin.of("retry-origin", "http://localhost:8081/api/resiliency/retry"))
@@ -103,13 +107,15 @@ class RoutingProvider {
                                         .maxRetries(3)
                                         .delay(0, ChronoUnit.MILLIS)
                                         .jitter(0, ChronoUnit.MILLIS))
-                                .build(),
-                                StatusCode.SC_SUCCESS))
+                                .withExpectation(StatusCode.SC_SUCCESS)
+                                .build()))
                 // ----------------------------- FALLBACK (only) -----------------------------
                 .addRoute(new Route("/with-fallback",
                         Origin.of("with-fallback-origin", "http://localhost:8081/api/non-existing-endpoint"))
-                        .setGuardHandler(SmallRyeFaultToleranceGuardHandler.builder().build(),
-                                (ctx, throwable) -> fallbackResponse(ctx, "Fallback response")))
+                        .setGuardHandler(SmallRyeFaultToleranceGuardHandler.builder()
+                                .withExpectation(StatusCode.SC_NON_ERROR)
+                                .withFallback(fallback)
+                                .build()))
                 // ---------------------- RATE LIMIT + FALLBACK ----------------------------
                 .addRoute(new Route("/rate-limit-with-fallback",
                         Origin.of("rate-limit-with-fallback-origin",
@@ -119,8 +125,8 @@ class RoutingProvider {
                                         .limit(1)
                                         .window(windowMillis, ChronoUnit.MILLIS)
                                         .type(RateLimitType.FIXED))
-                                .build(),
-                                (ctx, throwable) -> fallbackResponse(ctx, "Rate limit fallback")))
+                                .withFallback((ctx, throwable) -> fallbackResponse(ctx, "Rate limit fallback"))
+                                .build()))
                 // -------------------- CIRCUIT BREAKER + FALLBACK -------------------------
                 .addRoute(new Route("/circuit-breaker-with-fallback",
                         Origin.of("circuit-breaker-with-fallback-origin",
@@ -130,9 +136,9 @@ class RoutingProvider {
                                         .requestVolumeThreshold(4)
                                         .failureRatio(0.5)
                                         .delay(10, ChronoUnit.SECONDS))
-                                .build(),
-                                StatusCode.SC_SUCCESS,
-                                (ctx, throwable) -> fallbackResponse(ctx, "Circuit breaker fallback")))
+                                .withExpectation(StatusCode.SC_SUCCESS)
+                                .withFallback((ctx, throwable) -> fallbackResponse(ctx, "Circuit breaker fallback"))
+                                .build()))
                 // ----------------------- RETRY + FALLBACK --------------------------------
                 .addRoute(new Route("/retry-with-fallback",
                         Origin.of("retry-with-fallback-origin",
@@ -142,9 +148,23 @@ class RoutingProvider {
                                         .maxRetries(2)
                                         .delay(0, ChronoUnit.MILLIS)
                                         .jitter(0, ChronoUnit.MILLIS))
-                                .build(),
-                                StatusCode.SC_SUCCESS,
-                                (ctx, throwable) -> fallbackResponse(ctx, "Retry fallback")));
+                                .withExpectation(StatusCode.SC_SUCCESS)
+                                .withFallback((ctx, throwable) -> fallbackResponse(ctx, "Retry fallback"))
+                                .build()))
+                // -------------------- EXPECTATION + FALLBACK (no guard) -----------------
+                .addRoute(new Route("/expectation-with-fallback",
+                        Origin.of("expectation-with-fallback-origin",
+                                "http://localhost:8081/api/resiliency/circuit-breaker-fallback"))
+                        .setGuardHandler(SmallRyeFaultToleranceGuardHandler.builder()
+                                .withExpectation(StatusCode.SC_SUCCESS)
+                                .withFallback((ctx, throwable) -> fallbackResponse(ctx, "Expectation fallback"))
+                                .build()))
+                // ----------------------------- PAYLOAD LIMIT -----------------------------
+                .addRoute(new Route("/payload-limit",
+                        Origin.of("payload-limit-origin", "http://localhost:8081/api/resiliency/echo"))
+                        .setGuardHandler(SmallRyeFaultToleranceGuardHandler.builder()
+                                .withMaxPayloadSize(64)
+                                .build()));
     }
 
     private Future<ProxyResponse> fallbackResponse(ProxyContext ctx, String body) {
