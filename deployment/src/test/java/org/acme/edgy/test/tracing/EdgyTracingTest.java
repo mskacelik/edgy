@@ -1,9 +1,9 @@
 package org.acme.edgy.test.tracing;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -18,16 +18,16 @@ import org.acme.edgy.runtime.api.Origin;
 import org.acme.edgy.runtime.api.Route;
 import org.acme.edgy.runtime.api.RoutingConfiguration;
 import org.acme.edgy.runtime.api.utils.StatusCode;
+import org.assertj.core.api.SoftAssertions;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.SpanId;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
-import io.opentelemetry.sdk.trace.data.SpanData;
 import io.quarkus.maven.dependency.Dependency;
 import io.quarkus.test.QuarkusExtensionTest;
 
@@ -50,20 +50,23 @@ class EdgyTracingTest {
                 .statusCode(StatusCode.OK)
                 .body(is("Hello from origin!"));
 
-        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
-            List<SpanData> spans = spanExporter.getFinishedSpanItems();
-
-            SpanData serverSpan = spans.stream()
-                    .filter(s -> s.getKind() == SpanKind.SERVER && s.getParentSpanId().equals("0000000000000000"))
-                    .findFirst()
-                    .orElseThrow(() -> new AssertionError("No root SERVER span found in: " + spans));
-
-            Attributes attrs = serverSpan.getAttributes();
-
-            // edgy specific attributes of the server span
-            assertEquals("http://localhost:8081/test/hello", attrs.get(AttributeKey.stringKey("edgy.origin.url")));
-            assertEquals("origin-1", attrs.get(AttributeKey.stringKey("edgy.origin.id")));
-            assertEquals("/hello", attrs.get(AttributeKey.stringKey("edgy.route")));
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
+            assertThat(spanExporter.getFinishedSpanItems())
+                    .withFailMessage("No root SERVER span found in: %s", spanExporter.getFinishedSpanItems())
+                    .filteredOn(s -> s.getKind() == SpanKind.SERVER
+                            && SpanId.getInvalid().equals(s.getParentSpanId()))
+                    .first()
+                    .satisfies(serverSpan -> {
+                        var attrs = serverSpan.getAttributes();
+                        SoftAssertions.assertSoftly(softly -> {
+                            softly.assertThat(attrs.get(AttributeKey.stringKey("edgy.origin.url")))
+                                    .isEqualTo("http://localhost:8081/test/hello");
+                            softly.assertThat(attrs.get(AttributeKey.stringKey("edgy.origin.id")))
+                                    .isEqualTo("origin-1");
+                            softly.assertThat(attrs.get(AttributeKey.stringKey("edgy.route")))
+                                    .isEqualTo("/hello");
+                        });
+                    });
         });
     }
 

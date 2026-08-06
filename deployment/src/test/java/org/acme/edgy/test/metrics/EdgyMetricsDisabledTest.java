@@ -1,8 +1,8 @@
 package org.acme.edgy.test.metrics;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 
@@ -46,10 +46,10 @@ class EdgyMetricsDisabledTest {
                 .statusCode(StatusCode.OK)
                 .body(is("Hello from origin!"));
 
-        assertNull(registry.find("edgy.proxy.requests").timer(),
-                "No edgy proxy timer should be registered when metrics are disabled");
-        assertNull(registry.find("edgy.routes.count").gauge(),
-                "No route count gauge should be registered when metrics are disabled");
+        assertThat(registry.find("edgy.proxy.requests").timer())
+                .as("No edgy proxy timer should be registered when metrics are disabled").isNull();
+        assertThat(registry.find("edgy.routes.count").gauge())
+                .as("No route count gauge should be registered when metrics are disabled").isNull();
     }
 
     static class RoutingProvider {

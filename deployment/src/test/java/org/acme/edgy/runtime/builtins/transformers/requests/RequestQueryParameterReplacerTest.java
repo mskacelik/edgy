@@ -5,7 +5,7 @@ import static org.acme.edgy.runtime.api.utils.QueryParamUtils.QUERY_VALUE_SEPARA
 import static org.acme.edgy.runtime.api.utils.QueryParamUtils.urlEncode;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.acme.edgy.runtime.builtins.transformers.assertions.QueryParamAssertions.assertQueryParams;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Map;
@@ -116,7 +116,7 @@ class RequestQueryParameterReplacerTest {
         @GET
         @Path("/no-query")
         public RestResponse<Void> endpointNoQuery(@Context UriInfo uriInfo) {
-            assertTrue(uriInfo.getQueryParameters().isEmpty());
+            assertThat(uriInfo.getQueryParameters()).isEmpty();
             return RestResponse.ok();
         }
 

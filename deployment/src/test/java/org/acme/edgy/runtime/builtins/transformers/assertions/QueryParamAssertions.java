@@ -1,8 +1,9 @@
 package org.acme.edgy.runtime.builtins.transformers.assertions;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
@@ -24,22 +25,16 @@ public interface QueryParamAssertions {
                         (map, entry) -> map.put(entry.getKey(),
                                 entry.getValue().beforeDeserializationExpected()),
                         MultivaluedMap::putAll);
-        if (!expectedQueryParams.equals(actualQueryParams)) {
-            throw new AssertionError("Expected query params: " + expectedQueryParams + ", but got: "
-                    + actualQueryParams);
-        }
+        assertThat(actualQueryParams).containsExactlyInAnyOrderEntriesOf(expectedQueryParams);
     }
 
     record QueryParamValueBeforeAndAfterDeserialization(String queryName,
             List<String> beforeDeserializationExpected, Object afterDeserializationExpected,
             Object afterDeserializationActual) {
         public void assertDeserialization() {
-            if (!Objects.equals(afterDeserializationExpected, afterDeserializationActual)) {
-                throw new AssertionError(
-                        "For query param '" + queryName + "', expected after deserialization: "
-                                + afterDeserializationExpected + ", but got: "
-                                + afterDeserializationActual);
-            }
+            assertThat(afterDeserializationActual)
+                    .as("For query param '%s'", queryName)
+                    .isEqualTo(afterDeserializationExpected);
         }
     }
 

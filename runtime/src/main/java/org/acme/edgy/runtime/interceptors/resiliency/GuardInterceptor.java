@@ -3,16 +3,15 @@ package org.acme.edgy.runtime.interceptors.resiliency;
 import static jakarta.ws.rs.core.HttpHeaders.RETRY_AFTER;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
+import org.acme.edgy.runtime.api.resiliency.CircuitBreakerRejectedException;
+import org.acme.edgy.runtime.api.resiliency.GuardHandler;
+import org.acme.edgy.runtime.api.resiliency.RateLimitRejectedException;
 import org.acme.edgy.runtime.api.utils.ProxyErrorResponseBuilder;
 import org.acme.edgy.runtime.builtins.transformers.BodyAccumulator;
 import org.acme.edgy.runtime.builtins.transformers.BodySizeLimitExceededException;
-import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 
-import io.smallrye.faulttolerance.api.RateLimitException;
-import io.smallrye.faulttolerance.api.TypedGuard;
 import io.vertx.core.Expectation;
 import io.vertx.core.Future;
 import io.vertx.httpproxy.Body;
@@ -21,46 +20,69 @@ import io.vertx.httpproxy.ProxyInterceptor;
 import io.vertx.httpproxy.ProxyRequest;
 import io.vertx.httpproxy.ProxyResponse;
 
-public class GuardHandler implements ProxyInterceptor {
+/**
+ * Applies a {@link GuardHandler}'s resilience guard to proxied requests.
+ *
+ * <p>
+ * When a fallback is configured, it receives the current {@link ProxyContext}
+ * and the causing {@link Throwable} on every failure, allowing it to produce
+ * a fresh response per request. Without a fallback, guard-specific exceptions
+ * are mapped to HTTP status codes:
+ * <ul>
+ * <li>{@link RateLimitRejectedException} &rarr; 429 (Too Many Requests) with
+ * {@code Retry-After} header</li>
+ * <li>{@link CircuitBreakerRejectedException} &rarr; 503 (Service
+ * Unavailable)</li>
+ * </ul>
+ *
+ * <p>
+ * Independently of the fallback, a
+ * {@link BodySizeLimitExceededException} during body buffering is always
+ * mapped to 413 (Payload Too Large).
+ *
+ * @see GuardHandler
+ * @see org.acme.edgy.runtime.api.Route#setGuardHandler
+ */
+public class GuardInterceptor implements ProxyInterceptor {
 
-    private final BiConsumer<ProxyContext, ResiliencyBuilder> configurator;
+    private final GuardHandler handler;
     private final Expectation<ProxyResponse> expectation;
+    private final BiFunction<ProxyContext, Throwable, Future<ProxyResponse>> fallback;
 
-    private record GuardContainer(TypedGuard<Future<ProxyResponse>> guard, boolean buffering) {
+    public GuardInterceptor(GuardHandler handler, Expectation<ProxyResponse> expectation) {
+        this(handler, expectation, null);
     }
 
-    private final AtomicReference<GuardContainer> guardRef = new AtomicReference<>();
-
-    public GuardHandler(BiConsumer<ProxyContext, ResiliencyBuilder> configurator,
-            Expectation<ProxyResponse> expectation) {
-        this.configurator = Objects.requireNonNull(configurator);
+    public GuardInterceptor(GuardHandler handler, Expectation<ProxyResponse> expectation,
+            BiFunction<ProxyContext, Throwable, Future<ProxyResponse>> fallback) {
+        this.handler = Objects.requireNonNull(handler);
         this.expectation = Objects.requireNonNull(expectation);
+        this.fallback = fallback;
     }
 
     @Override
     public Future<ProxyResponse> handleProxyRequest(ProxyContext context) {
-        GuardContainer container = getOrInitialize(context);
-
-        Future<Void> preparation = container.buffering()
+        Future<Void> preparation = handler.needsBuffering()
                 ? bufferBody(context.request())
                 : Future.succeededFuture();
 
         return preparation.compose(v -> {
             try {
-                return container.guard().call(() -> context.sendRequest().expecting(expectation))
+                return handler.execute(() -> context.sendRequest().expecting(expectation))
                         .recover(throwable -> {
-                            if (throwable instanceof RateLimitException rateLimitException) {
+                            if (fallback != null) {
+                                return fallback.apply(context, throwable);
+                            }
+                            if (throwable instanceof RateLimitRejectedException rateLimitException) {
                                 String retryAfterValue = String
                                         .valueOf((rateLimitException.getRetryAfterMillis() + 999) / 1000);
                                 return ProxyErrorResponseBuilder.create(context)
                                         .tooManyRequests()
-                                        .message(rateLimitException.getMessage())
                                         .header(RETRY_AFTER, retryAfterValue)
                                         .sendResponseInRequestTransformer();
-                            } else if (throwable instanceof CircuitBreakerOpenException) {
+                            } else if (throwable instanceof CircuitBreakerRejectedException) {
                                 return ProxyErrorResponseBuilder.create(context)
                                         .serviceUnavailable()
-                                        .message(throwable.getMessage())
                                         .sendResponseInRequestTransformer();
                             }
                             return Future.failedFuture(throwable);
@@ -88,22 +110,5 @@ public class GuardHandler implements ProxyInterceptor {
             proxyRequest.setBody(Body.body(collected));
             return null;
         });
-    }
-
-    private GuardContainer getOrInitialize(ProxyContext proxyContext) {
-        GuardContainer current = guardRef.get();
-        if (current != null) {
-            return current;
-        }
-
-        ResiliencyBuilder builder = new ResiliencyBuilder();
-        configurator.accept(proxyContext, builder);
-        GuardContainer newlyCreated = new GuardContainer(builder.build(), builder.hasRetry());
-
-        if (guardRef.compareAndSet(null, newlyCreated)) {
-            return newlyCreated;
-        }
-
-        return guardRef.get();
     }
 }

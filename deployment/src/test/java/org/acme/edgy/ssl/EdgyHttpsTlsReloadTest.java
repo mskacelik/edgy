@@ -2,8 +2,8 @@ package org.acme.edgy.ssl;
 
 import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_GATEWAY;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -95,7 +95,7 @@ class EdgyHttpsTlsReloadTest {
                     new File(certs, "/tls.p12").toPath(), StandardCopyOption.REPLACE_EXISTING);
 
             TlsConfiguration config = tlsConfigurationRegistry.get(TLS_BUCKET_NAME).orElseThrow();
-            assertTrue(config.reload());
+            assertThat(config.reload()).isTrue();
             event.fire(new CertificateUpdatedEvent(TLS_BUCKET_NAME, config));
             RestAssured.given().when().get("/secure").then().statusCode(OK)
                     .body(is(HttpsServer.RESPONSE_BODY));

@@ -1,6 +1,6 @@
 package org.acme.edgy.test.basic;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.fail;
 
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Singleton;

@@ -5,9 +5,9 @@ import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_GATEWAY;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
 import static org.acme.edgy.runtime.api.utils.StatusCode.SERVICE_UNAVAILABLE;
 import static org.acme.edgy.runtime.api.utils.StatusCode.TOO_MANY_REQUESTS;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +29,7 @@ import io.restassured.RestAssured;
 import io.restassured.response.Response;
 
 @QuarkusTest
-class ResiliencyTest {
+class SmallRyeFaultToleranceGuardHandlerTest {
 
     private ExecutorService executorService;
 
@@ -95,19 +94,23 @@ class ResiliencyTest {
                 case TOO_MANY_REQUESTS -> {
                     countOfRateLimitedRequests++;
                     String retryAfter = response.getHeader(RETRY_AFTER);
-                    assertTrue(retryAfter != null && !retryAfter.isEmpty(),
-                            "RETRY_AFTER header missing for TOO_MANY_REQUESTS response");
-                    assertEquals("1", retryAfter,
-                            "RETRY_AFTER header should be 1 second, but was: " + retryAfter);
+                    assertThat(retryAfter)
+                            .as("RETRY_AFTER header missing for TOO_MANY_REQUESTS response")
+                            .isNotNull().isNotEmpty();
+                    assertThat(retryAfter)
+                            .as("RETRY_AFTER header should be 1 second")
+                            .isEqualTo("1");
                 }
-                default -> Assertions.fail("Unexpected status code: " + statusCode);
+                default -> fail("Unexpected status code: " + statusCode);
             }
         }
 
-        assertTrue(duration <= smoothWindowMillisWithOverhead,
-                "Duration " + duration + "ms exceeded threshold of " + smoothWindowMillisWithOverhead + "ms");
-        assertEquals(rateLimit, countOfInBoundRequests, "Successful requests mismatch");
-        assertEquals(numberOfRequests - rateLimit, countOfRateLimitedRequests, "Throttled requests mismatch");
+        assertThat(duration)
+                .as("Duration %dms exceeded threshold of %dms", duration, smoothWindowMillisWithOverhead)
+                .isLessThanOrEqualTo(smoothWindowMillisWithOverhead);
+        assertThat(countOfInBoundRequests).as("Successful requests mismatch").isEqualTo(rateLimit);
+        assertThat(countOfRateLimitedRequests).as("Throttled requests mismatch")
+                .isEqualTo(numberOfRequests - rateLimit);
     }
 
     @Test
@@ -131,7 +134,7 @@ class ResiliencyTest {
 
         List<Future<Response>> results = executorService.invokeAll(tasks);
         boolean saturated = readyLatch.await(2, TimeUnit.SECONDS);
-        assertTrue(saturated, "Threads failed to start in time");
+        assertThat(saturated).as("Threads failed to start in time").isTrue();
 
         blockLatch.countDown();
 
@@ -142,12 +145,12 @@ class ResiliencyTest {
             switch (statusCode) {
                 case OK -> countOfSuccessful++;
                 case BAD_GATEWAY -> countOfRejected++;
-                default -> Assertions.fail("Unexpected status code from bulkhead: " + statusCode);
+                default -> fail("Unexpected status code from bulkhead: " + statusCode);
             }
         }
 
-        assertEquals(totalCapacity, countOfSuccessful);
-        assertEquals(1, countOfRejected);
+        assertThat(countOfSuccessful).isEqualTo(totalCapacity);
+        assertThat(countOfRejected).isEqualTo(1);
     }
 
     @Test
@@ -197,15 +200,15 @@ class ResiliencyTest {
                 case OK -> countOf200++;
                 case BAD_GATEWAY -> countOf502++;
                 case SERVICE_UNAVAILABLE -> countOf503++;
-                default -> Assertions.fail("Unexpected status code: " + statusCode);
+                default -> fail("Unexpected status code: " + statusCode);
             }
         }
         // if the first request is the failed one (the first response retrieved by the
         // executor service => is not the first request on backend), then the CB will
         // lazily change its state to OPEN
-        assertTrue(countOf200 <= 2);
-        assertEquals(countOf502, 1);
-        assertEquals(countOf503, 6 - countOf200 - countOf502);
+        assertThat(countOf200).isLessThanOrEqualTo(2);
+        assertThat(countOf502).isEqualTo(1);
+        assertThat(countOf503).isEqualTo(6 - countOf200 - countOf502);
 
         // because the success threshold failed to be reached, the circuit breaker
         // should be in OPEN state
@@ -224,13 +227,14 @@ class ResiliencyTest {
             switch (statusCode) {
                 case OK -> countOf200++;
                 case SERVICE_UNAVAILABLE -> countOf503++;
-                default -> Assertions.fail("Unexpected status code: " + statusCode);
+                default -> fail("Unexpected status code: " + statusCode);
             }
         }
         // the reason for this is that the CB can close quickly before the other three
         // requests have a chance to hit the CB in HALF-OPEN state => they will pass
-        assertTrue(countOf200 >= 3 && countOf200 <= 6, "Successful requests mismatch");
-        assertEquals(6 - countOf200, countOf503, "Client error requests mismatch");
+        assertThat(countOf200).as("Successful requests mismatch")
+                .isGreaterThanOrEqualTo(3).isLessThanOrEqualTo(6);
+        assertThat(countOf503).as("Client error requests mismatch").isEqualTo(6 - countOf200);
 
         // finally verify that the circuit breaker is closed
         // 5 - (countOf200 - 3) is because of the comment above (overflow from the 3
@@ -272,5 +276,47 @@ class ResiliencyTest {
     void testFallback() {
         RestAssured.given().when().get("/with-fallback").then().statusCode(OK).and()
                 .body(Matchers.equalTo("Fallback response"));
+    }
+
+    @Test
+    void testRateLimitWithFallback() {
+        // rate limit: 1 request per 1000ms fixed window
+        // first request succeeds normally
+        RestAssured.given().when().get("/rate-limit-with-fallback").then().statusCode(OK);
+
+        // second request hits rate limit but fallback catches it
+        RestAssured.given().when().get("/rate-limit-with-fallback").then().statusCode(OK).and()
+                .body(Matchers.equalTo("Rate limit fallback"));
+    }
+
+    @Test
+    void testCircuitBreakerWithFallback() {
+        // CB: requestVolumeThreshold=4, failureRatio=0.5, delay=10s
+        // backend always returns 500, expectation is SC_SUCCESS so all count as failures
+        // first 4 requests fail at backend — CB monitors but stays closed
+        for (int i = 0; i < 4; i++) {
+            RestAssured.given().when().get("/circuit-breaker-with-fallback").then().statusCode(OK).and()
+                    .body(Matchers.equalTo("Circuit breaker fallback"));
+        }
+
+        // CB should now be open (4 requests, all failures, ratio = 1.0 > 0.5)
+        // next request is rejected by CB, fallback catches it
+        RestAssured.given().when().get("/circuit-breaker-with-fallback").then().statusCode(OK).and()
+                .body(Matchers.equalTo("Circuit breaker fallback"));
+    }
+
+    @Test
+    void testRetryWithFallback() {
+        RestAssured.given().when().get("/api/resiliency/retry-fallback-reset").then().statusCode(OK);
+
+        // retry: maxRetries=2 (3 total attempts), backend always returns 500
+        // all attempts fail, fallback catches the final failure
+        RestAssured.given().when().get("/retry-with-fallback").then().statusCode(OK).and()
+                .body(Matchers.equalTo("Retry fallback"));
+
+        // verify backend was hit exactly 3 times (1 initial + 2 retries)
+        String counter = RestAssured.given().when().get("/api/resiliency/retry-fallback-counter")
+                .then().statusCode(OK).extract().body().asString();
+        assertThat(counter).as("Backend should be hit 3 times (1 initial + 2 retries)").isEqualTo("3");
     }
 }
