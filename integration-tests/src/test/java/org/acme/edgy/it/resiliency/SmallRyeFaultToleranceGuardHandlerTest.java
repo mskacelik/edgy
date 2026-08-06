@@ -3,6 +3,7 @@ package org.acme.edgy.it.resiliency;
 import static jakarta.ws.rs.core.HttpHeaders.RETRY_AFTER;
 import static org.acme.edgy.runtime.api.utils.StatusCode.BAD_GATEWAY;
 import static org.acme.edgy.runtime.api.utils.StatusCode.OK;
+import static org.acme.edgy.runtime.api.utils.StatusCode.PAYLOAD_TOO_LARGE;
 import static org.acme.edgy.runtime.api.utils.StatusCode.SERVICE_UNAVAILABLE;
 import static org.acme.edgy.runtime.api.utils.StatusCode.TOO_MANY_REQUESTS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -306,6 +307,14 @@ class SmallRyeFaultToleranceGuardHandlerTest {
     }
 
     @Test
+    void testExpectationWithFallback() {
+        // no guard handler — just expectation + fallback
+        // backend always returns 500, SC_SUCCESS expectation fails, fallback kicks in
+        RestAssured.given().when().get("/expectation-with-fallback").then().statusCode(OK).and()
+                .body(Matchers.equalTo("Expectation fallback"));
+    }
+
+    @Test
     void testRetryWithFallback() {
         RestAssured.given().when().get("/api/resiliency/retry-fallback-reset").then().statusCode(OK);
 
@@ -318,5 +327,24 @@ class SmallRyeFaultToleranceGuardHandlerTest {
         String counter = RestAssured.given().when().get("/api/resiliency/retry-fallback-counter")
                 .then().statusCode(OK).extract().body().asString();
         assertThat(counter).as("Backend should be hit 3 times (1 initial + 2 retries)").isEqualTo("3");
+    }
+
+    @Test
+    void testPayloadWithinLimit() {
+        String smallBody = "hello";
+        RestAssured.given()
+                .body(smallBody)
+                .when().post("/payload-limit")
+                .then().statusCode(OK)
+                .body(Matchers.equalTo(smallBody));
+    }
+
+    @Test
+    void testPayloadExceedsLimit() {
+        String largeBody = "x".repeat(100);
+        RestAssured.given()
+                .body(largeBody)
+                .when().post("/payload-limit")
+                .then().statusCode(PAYLOAD_TOO_LARGE);
     }
 }
