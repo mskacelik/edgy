@@ -1,7 +1,5 @@
 package org.acme.edgy.runtime.api;
 
-import static org.acme.edgy.runtime.api.utils.StatusCode.SC_NON_ERROR;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -9,18 +7,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.BiFunction;
 
 import org.acme.edgy.runtime.api.resiliency.GuardHandler;
 import org.acme.edgy.runtime.api.utils.SegmentUtils;
 import org.acme.edgy.runtime.api.utils.SegmentUtils.CompiledPath;
 import org.acme.edgy.runtime.interceptors.resiliency.GuardInterceptor;
 
-import io.vertx.core.Expectation;
-import io.vertx.core.Future;
-import io.vertx.httpproxy.ProxyContext;
 import io.vertx.httpproxy.ProxyInterceptor;
-import io.vertx.httpproxy.ProxyResponse;
 
 public class Route {
 
@@ -137,55 +130,13 @@ public class Route {
     }
 
     /**
-     * Sets a resilience guard for this route using the default
-     * {@linkplain org.acme.edgy.runtime.api.utils.StatusCode#SC_NON_ERROR non-error}
-     * expectation.
+     * Sets a resilience guard for this route.
      *
-     * @param handler the immutable guard handler
+     * @param handler the guard handler carrying expectation, fallback, and payload limit
      * @see GuardHandler
      */
     public Route setGuardHandler(GuardHandler handler) {
-        return setGuardHandler(handler, SC_NON_ERROR);
-    }
-
-    /**
-     * Sets a resilience guard for this route with a custom {@link Expectation}
-     * that determines which responses are considered successful.
-     *
-     * @param handler     the immutable guard handler
-     * @param expectation defines which proxy responses are treated as success
-     */
-    public Route setGuardHandler(GuardHandler handler, Expectation<ProxyResponse> expectation) {
-        this.guardInterceptor = new GuardInterceptor(handler, expectation);
-        return this;
-    }
-
-    /**
-     * Sets a resilience guard with a fallback for this route using the default
-     * {@linkplain org.acme.edgy.runtime.api.utils.StatusCode#SC_NON_ERROR non-error}
-     * expectation. When the guard rejects a request, the fallback receives the
-     * current {@link ProxyContext} and the causing exception to produce an
-     * alternative response.
-     *
-     * @param handler  the immutable guard handler
-     * @param fallback function that produces a fallback response on failure
-     */
-    public Route setGuardHandler(GuardHandler handler,
-            BiFunction<ProxyContext, Throwable, Future<ProxyResponse>> fallback) {
-        return setGuardHandler(handler, SC_NON_ERROR, fallback);
-    }
-
-    /**
-     * Sets a resilience guard with a fallback and a custom {@link Expectation}
-     * for this route.
-     *
-     * @param handler     the immutable guard handler
-     * @param expectation defines which proxy responses are treated as success
-     * @param fallback    function that produces a fallback response on failure
-     */
-    public Route setGuardHandler(GuardHandler handler, Expectation<ProxyResponse> expectation,
-            BiFunction<ProxyContext, Throwable, Future<ProxyResponse>> fallback) {
-        this.guardInterceptor = new GuardInterceptor(handler, expectation, fallback);
+        this.guardInterceptor = new GuardInterceptor(handler);
         return this;
     }
 
